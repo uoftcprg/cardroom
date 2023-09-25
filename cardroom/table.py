@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from threading import Condition, Event, RLock, Timer
+from threading import Condition, RLock, Timer
 from typing import Any, ClassVar
 
 from pokerkit import CardsLike, State
@@ -49,8 +49,8 @@ class Table:
     state: State | None = field(init=False, default=None)
 
     _state_update_count: int = field(init=False, default=0)
-    _update_event: Event = field(init=False, default_factory=Event)
-    _termination_event: Event = field(init=False, default_factory=Event)
+    _update_status: bool = field(init=False, default=False)
+    _termination_status: bool = field(init=False, default=False)
     _lock: RLock = field(init=False, default_factory=RLock)
     _condition: Condition = field(init=False)
 
@@ -105,13 +105,13 @@ class Table:
         raise ValueError('unknown seat index or player name')
 
     def mainloop(self) -> None:
-        while not self._termination_event.is_set():
-            with self._condition:
+        with self._condition:
+            while not self._termination_status:
                 self._condition.wait_for(
-                    self._update_event.is_set,
+                    lambda: self._update_status,
                     self.CONDITION_WAIT_TIMEOUT,
                 )
-                self._update_event.clear()
+                self._update_status = False
 
                 if self.state is None:
                     pass  # TODO
@@ -493,7 +493,7 @@ class Table:
                 operation = method(*args, **kwargs)
 
                 self.callback(self, operation)
-                self._update_event.set()
+                self._update_status = True
                 self._condition.notify()
 
         Timer(timeout, function).start()
