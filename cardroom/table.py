@@ -1,520 +1,646 @@
+""":mod:`cardroom.table` implements classes related to cardroom tables."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
+from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime
-from threading import Condition, RLock, Timer
-from typing import Any, ClassVar
+from datetime import datetime, timedelta
+from threading import Lock
+from traceback import format_exc
+from typing import Any
+from warnings import warn
+import sched
 
-from pokerkit import CardsLike, State
-from pokerkit.state import Operation  # TODO
+from pokerkit import (
+    Automation,
+    BettingStructure,
+    CardsLike,
+    Deck,
+    Hand,
+    Operation,
+    State,
+    Street,
+    ValuesLike,
+)
 
 
 @dataclass
 class Table:
-    CONDITION_WAIT_TIMEOUT: ClassVar[float] = 1
+    """The class for cardroom tables."""
 
     seat_count: int
+    """The number of seats."""
+    button_status: bool
+    """The button status."""
+    deck: Deck
+    """The deck."""
+    hand_types: tuple[type[Hand], ...]
+    """The hand types."""
+    streets: tuple[Street, ...]
+    """The streets."""
+    betting_structure: BettingStructure
+    """The betting structure."""
+    automations: tuple[Automation, ...]
+    """The automations."""
+    ante_trimming_status: bool
+    """The ante trimming status.
+
+    Usually, if you want uniform antes, set this to ``True``. If you
+    want non-uniform antes like big blind antes, set this to ``False``.
+    """
+    raw_antes: ValuesLike
+    """The raw antes."""
+    raw_blinds_or_straddles: ValuesLike
+    """The raw blinds or straddles."""
+    bring_in: int
+    """The bring-in."""
     idle_timeout: float
+    """The idle timeout."""
     ante_posting_timeout: float
+    """The ante posting timeout."""
     bet_collection_timeout: float
+    """The bet collection timeout."""
     blind_or_straddle_posting_timeout: float
+    """The blind or straddle posting timeout."""
     card_burning_timeout: float
+    """The card burning timeout."""
     hole_dealing_timeout: float
+    """The hole dealing timeout."""
     board_dealing_timeout: float
+    """The board dealing timeout."""
     standing_pat_timeout: float
+    """The standing pat timeout."""
     folding_timeout: float
+    """The folding timeout."""
     checking_timeout: float
+    """The checking timeout."""
     bring_in_posting_timeout: float
+    """The bring-in posting timeout."""
     hole_cards_showing_or_mucking_timeout: float
+    """The hole cards showing or mucking timeout."""
     hand_killing_timeout: float
+    """The hand killing timeout."""
     chips_pushing_timeout: float
+    """The chips pushing timeout."""
     chips_pulling_timeout: float
+    """The chips pulling timeout."""
     skip_timeout: float
+    """The skip timeout."""
     callback: Callable[[Table, Operation | None], Any]
-
+    """The callback."""
     player_names: list[str | None] = field(init=False, default_factory=list)
+    """The player names."""
     player_indices: list[int | None] = field(init=False, default_factory=list)
-    final_stack: list[int | None] = field(init=False, default_factory=list)
-    buy_in_top_off_or_rat_holing_amounts: list[int | None] = field(
+    """The player indices."""
+    starting_stacks: list[int | None] = field(init=False, default_factory=list)
+    """The starting stacks."""
+    buy_in_rebuy_top_off_or_rat_holing_amounts: list[int | None] = field(
         init=False,
         default_factory=list,
     )
-    inactive_timestamps: list[datetime | None] = field(
+    """The buy-in, rebuy, top-off, or rat-holing amounts."""
+    idle_timestamps: list[datetime | None] = field(
         init=False,
         default_factory=list,
     )
-    connection_statuses: list[bool] = field(init=False, default_factory=list)
-
+    """The idle timestamps."""
     state: State | None = field(init=False, default=None)
-
-    _state_update_count: int = field(init=False, default=0)
-    _update_status: bool = field(init=False, default=False)
-    _termination_status: bool = field(init=False, default=False)
-    _lock: RLock = field(init=False, default_factory=RLock)
-    _condition: Condition = field(init=False)
+    """The state."""
+    button_index: int | None = field(init=False, default=None)
+    """The button index."""
 
     def __post_init__(self) -> None:
-        self._condition = Condition(self._lock)
-
         for _ in range(self.seat_count):
             self.player_names.append(None)
             self.player_indices.append(None)
-            self.buy_in_top_off_or_rat_holing_amounts.append(None)
-            self.inactive_timestamps.append(None)
-            self.connection_statuses.append(False)
+            self.starting_stacks.append(None)
+            self.buy_in_rebuy_top_off_or_rat_holing_amounts.append(None)
+            self.idle_timestamps.append(None)
 
     @property
     def seat_indices(self) -> range:
+        """Return the seat indices.
+
+        :return: The seat indices.
+        """
         return range(self.seat_count)
 
     @property
-    def activity_statuses(self) -> list[bool]:
-        with self._lock:
-            return [
-                timestamp is None for timestamp in self.inactive_timestamps
-            ]
+    def turn_index(self) -> int | None:
+        """Return the turn index, if any.
+
+        The turn index corresponds to the player index, not the seat
+        index.
+
+        :return: The optional turn index.
+        """
+        turn_index = None
+
+        if self.state is not None:
+            if self.state.stander_pat_or_discarder_index is not None:
+                turn_index = self.state.stander_pat_or_discarder_index
+            elif self.state.actor_index is not None:
+                turn_index = self.state.actor_index
+            elif self.state.showdown_index is not None:
+                turn_index = self.state.showdown_index
+
+        return turn_index
+
+    def is_active(self, seat_index: int) -> bool:
+        """Return the active status of the player at the seat.
+
+        :param seat_index: The seat index.
+        :return: The active status of the player at the seat.
+        """
+        return (
+            self.player_names[seat_index] is not None
+            and not self.is_idle(seat_index)
+        )
+
+    def is_idle(self, seat_index: int) -> bool:
+        """Return the idle status of the player at the seat.
+
+        :param seat_index: The seat index.
+        :return: The idle status of the player at the seat.
+        """
+        return self.idle_timestamps[seat_index] is not None
 
     def get_seat_index(self, player_name_or_player_index: str | int) -> int:
-        with self._lock:
-            for i, (player_name, player_index) in enumerate(
-                    zip(self.player_names, self.player_indices),
-            ):
-                if (
-                        player_name == player_name_or_player_index
-                        or player_index == player_name_or_player_index
-                ):
-                    return i
+        """Return the seat index of the player.
+
+        :param player_name_or_player_index: The player name or the
+                                            player index.
+        :return: The seat index of the player.
+        """
+        if (
+                isinstance(player_name_or_player_index, str)
+                and player_name_or_player_index in self.player_names
+        ):
+            return self.player_names.index(player_name_or_player_index)
+        elif (
+                isinstance(player_name_or_player_index, int)
+                and player_name_or_player_index in self.player_indices
+        ):
+            return self.player_indices.index(player_name_or_player_index)
 
         raise ValueError('unknown player name or player index')
 
-    def get_player_index(
-            self,
-            seat_index_or_player_name: int | str,
-    ) -> int | None:
-        with self._lock:
-            for i, (seat_index, player_name) in enumerate(
-                    zip(self.seat_indices, self.player_names),
-            ):
-                if (
-                        seat_index == seat_index_or_player_name
-                        or player_name == seat_index_or_player_name
-                ):
-                    return self.player_indices[i]
-
-        raise ValueError('unknown seat index or player name')
-
-    def mainloop(self) -> None:
-        with self._condition:
-            while not self._termination_status:
-                self._condition.wait_for(
-                    lambda: self._update_status,
-                    self.CONDITION_WAIT_TIMEOUT,
-                )
-                self._update_status = False
-
-                if self.state is None:
-                    pass  # TODO
-                else:
-                    if self.state.can_post_ante():
-                        self._update_state(
-                            self.ante_posting_timeout,
-                            self.state.post_ante,
-                        )
-                    elif self.state.can_collect_bets():
-                        self._update_state(
-                            self.bet_collection_timeout,
-                            self.state.collect_bets,
-                        )
-                    elif self.state.can_post_blind_or_straddle():
-                        self._update_state(
-                            self.blind_or_straddle_posting_timeout,
-                            self.state.post_blind_or_straddle,
-                        )
-                    elif self.state.can_burn_card():
-                        self._update_state(
-                            self.card_burning_timeout,
-                            self.state.burn_card,
-                        )
-                    elif self.state.can_deal_hole():
-                        self._update_state(
-                            self.hole_dealing_timeout,
-                            self.state.deal_hole,
-                        )
-                    elif self.state.can_deal_board():
-                        self._update_state(
-                            self.board_dealing_timeout,
-                            self.state.deal_board,
-                        )
-                    elif self.state.can_stand_pat_or_discard():
-                        assert (
-                            self.state.stander_pat_or_discarder_index
-                            is not None
-                        )
-
-                        seat_index = self.get_seat_index(
-                            self.state.stander_pat_or_discarder_index,
-                        )
-
-                        if self.activity_statuses[seat_index]:
-                            timeout = self.standing_pat_timeout
-                        else:
-                            timeout = self.skip_timeout
-
-                        self._update_state(
-                            timeout,
-                            self._deactivate_and,
-                            seat_index,
-                            self.state.stand_pat_or_discard,
-                        )
-                    elif self.state.can_fold():
-                        assert self.state.actor_index is not None
-
-                        seat_index = self.get_seat_index(
-                            self.state.actor_index,
-                        )
-
-                        if self.activity_statuses[seat_index]:
-                            timeout = self.folding_timeout
-                        else:
-                            timeout = self.skip_timeout
-
-                        self._update_state(
-                            timeout,
-                            self._deactivate_and,
-                            seat_index,
-                            self.state.fold,
-                        )
-                    elif self.state.can_check_or_call():
-                        assert self.state.actor_index is not None
-
-                        seat_index = self.get_seat_index(
-                            self.state.actor_index,
-                        )
-
-                        if self.activity_statuses[seat_index]:
-                            timeout = self.checking_timeout
-                        else:
-                            timeout = self.skip_timeout
-
-                        self._update_state(
-                            timeout,
-                            self._deactivate_and,
-                            seat_index,
-                            self.state.check_or_call,
-                        )
-                    elif self.state.can_post_bring_in():
-                        assert self.state.actor_index is not None
-
-                        seat_index = self.get_seat_index(
-                            self.state.actor_index,
-                        )
-
-                        if self.activity_statuses[seat_index]:
-                            timeout = self.bring_in_posting_timeout
-                        else:
-                            timeout = self.skip_timeout
-
-                        self._update_state(
-                            timeout,
-                            self._deactivate_and,
-                            seat_index,
-                            self.state.post_bring_in,
-                        )
-                    elif self.state.can_show_or_muck_hole_cards():
-                        assert self.state.showdown_index is not None
-
-                        seat_index = self.get_seat_index(
-                            self.state.showdown_index,
-                        )
-
-                        if self.activity_statuses[seat_index]:
-                            timeout = (
-                                self.hole_cards_showing_or_mucking_timeout
-                            )
-                        else:
-                            timeout = self.skip_timeout
-
-                        self._update_state(
-                            timeout,
-                            self.state.show_or_muck_hole_cards,
-                        )
-                    elif self.state.can_kill_hand():
-                        self._update_state(
-                            self.hand_killing_timeout,
-                            self.state.kill_hand,
-                        )
-                    elif self.state.can_push_chips():
-                        self._update_state(
-                            self.chips_pushing_timeout,
-                            self.state.push_chips,
-                        )
-                    elif self.state.can_pull_chips():
-                        self._update_state(
-                            self.chips_pulling_timeout,
-                            self.state.pull_chips,
-                        )
-
     def connect(self, player_name: str, seat_index: int, amount: int) -> None:
-        with self._lock:
-            self._update(0, self._connect, seat_index, player_name, amount)
+        """Connect the player.
+
+        :param player_name: The player name.
+        :param seat_index: The seat index.
+        :param amount: The buy-in amount.
+        :return: ``None``.
+        """
+        self._call(0, self._connect, player_name, seat_index, amount)
+
+    def _connect(self, player_name: str, seat_index: int, amount: int) -> None:
+        if seat_index not in self.seat_indices:
+            raise ValueError('seat index out of bounds')
+        elif amount < 0:
+            raise ValueError('negative amount')
+
+        self.player_names[seat_index] = player_name
+        self.player_indices[seat_index] = None
+        self.starting_stacks[seat_index] = None
+        self.buy_in_rebuy_top_off_or_rat_holing_amounts[seat_index] = amount
+        self.idle_timestamps[seat_index] = None
 
     def disconnect(self, player_name: str) -> None:
-        with self._lock:
-            self._update(0, self._disconnect, self.get_seat_index(player_name))
+        """Disconnect the player.
+
+        :param player_name: The player name.
+        :return: ``None``.
+        """
+        self._call(0, self._disconnect, player_name)
+
+    def _disconnect(self, player_name: str) -> None:
+        seat_index = self.get_seat_index(player_name)
+        self.idle_timestamps[seat_index] = datetime.utcfromtimestamp(0)
 
     def activate(self, player_name: str) -> None:
-        with self._lock:
-            self._update(0, self._activate, self.get_seat_index(player_name))
+        """Activate the player.
+
+        :param player_name: The player name.
+        :return: ``None``.
+        """
+        self._call(0, self._activate, player_name)
+
+    def _activate(self, player_name: str) -> None:
+        seat_index = self.get_seat_index(player_name)
+        self.idle_timestamps[seat_index] = None
 
     def deactivate(self, player_name: str) -> None:
-        with self._lock:
-            self._update(0, self._deactivate, self.get_seat_index(player_name))
+        """Deactivate the player.
 
-    def buy_in_top_off_or_rat_hole(
+        :param player_name: The player name.
+        :return: ``None``.
+        """
+        self._call(0, self._deactivate, player_name)
+
+    def _deactivate(self, player_name: str) -> None:
+        seat_index = self.get_seat_index(player_name)
+        self.idle_timestamps[seat_index] = datetime.now()
+
+    def buy_in_rebuy_top_off_or_rat_hole(
             self,
             player_name: str,
             amount: int,
     ) -> None:
-        with self._lock:
-            self._update_state(
-                0,
-                self._activate_and,
-                self.get_seat_index(player_name),
-                self._buy_in_top_off_or_rat_hole,
-                self.get_seat_index(player_name),
-                amount,
-            )
+        """Buy in, rebuy, top-off, or rat-hole.
+
+        :param player_name: The player name.
+        :param amount: The amount.
+        :return: ``None``.
+        """
+        self._call(
+            0,
+            self._buy_in_rebuy_top_off_or_rat_hole,
+            player_name,
+            amount,
+        )
+
+    def _buy_in_rebuy_top_off_or_rat_hole(
+            self,
+            player_name: str,
+            amount: int,
+    ) -> None:
+        if amount < 0:
+            raise ValueError('negative amount')
+
+        self._activate(player_name)
+
+        seat_index = self.get_seat_index(player_name)
+        self.buy_in_rebuy_top_off_or_rat_holing_amounts[seat_index] = amount
 
     def stand_pat_or_discard(
             self,
             player_name: str,
             cards: CardsLike = None,
     ) -> None:
-        with self._lock:
-            if (
-                    self.state is not None
-                    and (
-                        self.state.stander_pat_or_discarder_index
-                        == self.get_player_index(player_name)
-                    )
-            ):
-                assert self.state.stander_pat_or_discarder_index is not None
+        """Stand pat or discard.
 
-                self._update_state(
-                    0,
-                    self._activate_and,
-                    self.get_seat_index(
-                        self.state.stander_pat_or_discarder_index,
-                    ),
-                    self.state.stand_pat_or_discard,
-                    cards,
-                )
+        :param player_name: The player name.
+        :param cards: The cards.
+        :return: ``None``.
+        """
+        self._call_state(player_name, 0, State.stand_pat_or_discard, cards)
 
     def fold(self, player_name: str) -> None:
-        with self._lock:
-            if (
-                    self.state is not None
-                    and (
-                        self.state.actor_index
-                        == self.get_player_index(player_name)
-                    )
-            ):
-                assert self.state.actor_index is not None
+        """Fold.
 
-                self._update_state(
-                    0,
-                    self._activate_and,
-                    self.get_seat_index(self.state.actor_index),
-                    self.state.fold,
-                )
+        :param player_name: The player name.
+        :return: ``None``.
+        """
+        self._call_state(player_name, 0, State.fold)
 
     def check_or_call(self, player_name: str) -> None:
-        with self._lock:
-            if (
-                    self.state is not None
-                    and (
-                        self.state.actor_index
-                        == self.get_player_index(player_name)
-                    )
-            ):
-                assert self.state.actor_index is not None
+        """Check or call.
 
-                self._update_state(
-                    0,
-                    self._activate_and,
-                    self.get_seat_index(self.state.actor_index),
-                    self.state.check_or_call,
-                )
+        :param player_name: The player name.
+        :return: ``None``.
+        """
+        self._call_state(player_name, 0, State.check_or_call)
 
     def post_bring_in(self, player_name: str) -> None:
-        with self._lock:
-            if (
-                    self.state is not None
-                    and (
-                        self.state.actor_index
-                        == self.get_player_index(player_name)
-                    )
-            ):
-                assert self.state.actor_index is not None
+        """Post bring-in.
 
-                self._update_state(
-                    0,
-                    self._activate_and,
-                    self.get_seat_index(self.state.actor_index),
-                    self.state.post_bring_in,
-                )
+        :param player_name: The player name.
+        :return: ``None``.
+        """
+        self._call_state(player_name, 0, State.post_bring_in)
 
     def complete_bet_or_raise_to(
             self,
             player_name: str,
             amount: int | None = None,
     ) -> None:
-        with self._lock:
-            if (
-                    self.state is not None
-                    and (
-                        self.state.actor_index
-                        == self.get_player_index(player_name)
-                    )
-            ):
-                assert self.state.actor_index is not None
+        """Complete, bet, or raise to.
 
-                self._update_state(
-                    0,
-                    self._activate_and,
-                    self.get_seat_index(self.state.actor_index),
-                    self.state.complete_bet_or_raise_to,
-                    amount,
-                )
+        :param player_name: The player name.
+        :param amount: The optional amount.
+        :return: ``None``.
+        """
+        self._call_state(
+            player_name,
+            0,
+            State.complete_bet_or_raise_to,
+            amount,
+        )
 
     def show_or_muck_hole_cards(
             self,
             player_name: str,
             status: bool | None = None,
     ) -> None:
-        with self._lock:
-            if (
-                    self.state is not None
-                    and (
-                        self.state.showdown_index
-                        == self.get_player_index(player_name)
-                    )
-            ):
-                assert self.state.showdown_index is not None
+        """Show or muck hole cards.
 
-                self._update_state(
-                    0,
-                    self._activate_and,
-                    self.get_seat_index(self.state.showdown_index),
-                    self.state.show_or_muck_hole_cards,
-                    status,
+        :param player_name: The player name.
+        :param status: The optional status.
+        :return: ``None``.
+        """
+        self._call_state(
+            player_name,
+            0,
+            State.show_or_muck_hole_cards,
+            status,
+        )
+
+    def _play(self) -> None:
+        if self.state:
+            if self.state.status:
+                raise ValueError('state active')
+
+            for i in self.seat_indices:
+                player_index = self.player_indices[i]
+
+                if player_index is not None:
+                    self.starting_stacks[i] = self.state.stacks[player_index]
+                else:
+                    self.starting_stacks[i] = None
+
+                self.player_indices[i] = None
+
+            for i in self.seat_indices:
+                self.player_indices[i] = None
+
+            self.state = None
+
+        for i in self.seat_indices:
+            if (
+                    self.buy_in_rebuy_top_off_or_rat_holing_amounts[i]
+                    is not None
+            ):
+                self.starting_stacks[i] = (
+                    self.buy_in_rebuy_top_off_or_rat_holing_amounts[i]
                 )
 
-    def _connect(
-            self,
-            seat_index: int,
-            player_name: str,
-            amount: int,
-    ) -> None:
-        with self._lock:
-            self.player_names[seat_index] = player_name
-            self.player_indices[seat_index] = None
-            self.buy_in_top_off_or_rat_holing_amounts[seat_index] = amount
-            self.inactive_timestamps[seat_index] = None
-            self.connection_statuses[seat_index] = True
+            self.buy_in_rebuy_top_off_or_rat_holing_amounts[i] = None
 
-            self._activate(seat_index)
+        for i in self.seat_indices:
+            if self.starting_stacks[i] == 0:
+                player_name = self.player_names[i]
 
-    def _disconnect(
-            self,
-            seat_index: int,
-    ) -> None:
-        with self._lock:
-            self.connection_statuses[seat_index] = False
+                assert player_name is not None
 
-            self._deactivate(seat_index)
+                self._deactivate(player_name)
 
-    def _activate(self, seat_index: int) -> None:
-        with self._lock:
-            assert self.player_names[seat_index] is not None
+                self.starting_stacks[i] = None
 
-            self.inactive_timestamps[seat_index] = None
+            idle_timestamp = self.idle_timestamps[i]
 
-    def _activate_and(
-            self,
-            seat_index: int,
-            method: Callable[..., Operation | None],
-            *args: Any,
-            **kwargs: Any,
-    ) -> Operation | None:
-        with self._lock:
-            self._activate(seat_index)
+            if (
+                    idle_timestamp is not None
+                    and (
+                        idle_timestamp + timedelta(seconds=self.idle_timeout)
+                        <= datetime.now()
+                    )
+            ):
+                self.player_names[i] = None
+                self.player_indices[i] = None
+                self.starting_stacks[i] = None
+                self.buy_in_rebuy_top_off_or_rat_holing_amounts[i] = None
+                self.idle_timestamps[i] = None
 
-            return method(*args, **kwargs)
+        active_seat_indices = deque(filter(self.is_active, self.seat_indices))
 
-    def _deactivate(self, seat_index: int) -> None:
-        with self._lock:
-            assert self.player_names[seat_index] is not None
+        if len(active_seat_indices) >= 2:
+            if self.button_status:
+                if (
+                        self.button_index is None
+                        or self.button_index >= active_seat_indices[-1]
+                ):
+                    self.button_index = active_seat_indices[0]
+                else:
+                    self.button_index = next(
+                        i for i in active_seat_indices if i > self.button_index
+                    )
 
-            if self.inactive_timestamps[seat_index] is None:
-                self.inactive_timestamps[seat_index] = datetime.now()
+                active_seat_indices.rotate(
+                    -active_seat_indices.index(self.button_index) - 1,
+                )
 
-    def _deactivate_and(
-            self,
-            seat_index: int,
-            method: Callable[..., Operation | None],
-            *args: Any,
-            **kwargs: Any,
-    ) -> Operation | None:
-        with self._lock:
-            self._deactivate(seat_index)
+            for i in self.seat_indices:
+                if i in active_seat_indices:
+                    self.player_indices[i] = active_seat_indices.index(i)
+                else:
+                    self.player_indices[i] = None
 
-            return method(*args, **kwargs)
+            starting_stacks = []
 
-    def _buy_in_top_off_or_rat_hole(
-            self,
-            seat_index: int,
-            amount: int,
-    ) -> None:
-        with self._lock:
-            self.buy_in_top_off_or_rat_holing_amounts[seat_index] = amount
+            for i in active_seat_indices:
+                starting_stack = self.starting_stacks[i]
 
-    def _update(
-            self,
-            timeout: float,
-            method: Callable[..., Operation | None],
-            *args: Any,
-            **kwargs: Any,
-    ) -> None:
+                assert starting_stack is not None
 
-        def function() -> None:
-            with self._condition:
-                operation = method(*args, **kwargs)
+                starting_stacks.append(starting_stack)
 
-                self.callback(self, operation)
-                self._update_status = True
-                self._condition.notify()
+            self.state = State(
+                self.deck,
+                self.hand_types,
+                self.streets,
+                self.betting_structure,
+                self.automations,
+                self.ante_trimming_status,
+                self.raw_antes,
+                self.raw_blinds_or_straddles,
+                self.bring_in,
+                starting_stacks,
+                len(starting_stacks),
+            )
+        else:
+            for i in self.seat_indices:
+                self.player_indices[i] = None
 
-        Timer(timeout, function).start()
+            self.button_index = None
 
-    def _update_state(
+    _scheduler: sched.scheduler = field(
+        init=False,
+        default_factory=sched.scheduler,
+    )
+
+    def _call(
             self,
             timeout: float,
-            method: Callable[..., Operation | None],
+            function: Callable[..., Operation | None],
             *args: Any,
             **kwargs: Any,
     ) -> None:
 
-        def function() -> Operation | None:
-            with self._lock:
-                if state_update_count != self._state_update_count:
-                    raise ValueError('obsolete update')
+        def nested_function() -> Operation | None:
+            try:
+                operation = function(*args, **kwargs)
+            except:  # noqa: E722
+                warn(format_exc())
 
-                self._state_update_count += 1
+            self._update()
 
-                return method(*args, **kwargs)
+            return operation
 
-        state_update_count = self._state_update_count
+        self._scheduler.enter(timeout, 0, nested_function)
 
-        self._update(timeout, function)
+    _counter: int = field(init=False, default=0)
+    _counter_lock: Lock = field(init=False, default_factory=Lock)
+
+    def _call_state(
+            self,
+            player_name: str | None,
+            timeout: float,
+            function: Callable[..., Operation | None],
+            *args: Any,
+            **kwargs: Any,
+    ) -> None:
+
+        def nested_function(count: int) -> Operation | None:
+
+            with self._counter_lock:
+                if count != self._counter:
+                    raise ValueError('counter check failed')
+
+            if self.state is None:
+                raise ValueError('state does not exist')
+
+            if player_name is None:
+                if (
+                        self.turn_index is not None
+                        and self.state.showdown_index is None
+                ):
+                    idle_player_name = (
+                        self.player_names[self.get_seat_index(self.turn_index)]
+                    )
+
+                    assert idle_player_name is not None
+
+                    self._deactivate(idle_player_name)
+            else:
+                self._activate(player_name)
+
+                if (
+                        self.player_indices[self.get_seat_index(player_name)]
+                        != self.turn_index
+                ):
+                    raise ValueError('player not in action')
+
+            return function(self.state, *args, **kwargs)
+
+        with self._counter_lock:
+            self._call(timeout, nested_function, self._counter)
+
+    def _update(self) -> None:
+        if self.state is None:
+            self._call(0, self._play)
+        else:
+            if self.state.can_post_ante():
+                self._call_state(
+                    None,
+                    self.ante_posting_timeout,
+                    State.post_ante,
+                )
+            elif self.state.can_collect_bets():
+                self._call_state(
+                    None,
+                    self.bet_collection_timeout,
+                    State.collect_bets,
+                )
+            elif self.state.can_post_blind_or_straddle():
+                self._call_state(
+                    None,
+                    self.blind_or_straddle_posting_timeout,
+                    State.post_blind_or_straddle,
+                )
+            elif self.state.can_burn_card():
+                self._call_state(
+                    None,
+                    self.card_burning_timeout,
+                    State.burn_card,
+                )
+            elif self.state.can_deal_hole():
+                self._call_state(
+                    None,
+                    self.hole_dealing_timeout,
+                    State.deal_hole,
+                )
+            elif self.state.can_deal_board():
+                self._call_state(
+                    None,
+                    self.board_dealing_timeout,
+                    State.deal_board,
+                )
+            elif self.state.can_kill_hand():
+                self._call_state(
+                    None,
+                    self.hand_killing_timeout,
+                    State.kill_hand,
+                )
+            elif self.state.can_push_chips():
+                self._call_state(
+                    None,
+                    self.chips_pushing_timeout,
+                    State.push_chips,
+                )
+            elif self.state.can_pull_chips():
+                self._call_state(
+                    None,
+                    self.chips_pulling_timeout,
+                    State.pull_chips,
+                )
+
+            if self.turn_index is not None:
+                assert self.turn_index is not None
+
+                seat_index = self.get_seat_index(self.turn_index)
+
+                if self.is_idle(seat_index):
+                    timeout = self.skip_timeout
+                else:
+                    timeout = None
+
+                if self.state.can_stand_pat_or_discard():
+                    if timeout is None:
+                        timeout = self.standing_pat_timeout
+
+                    self._call_state(
+                        None,
+                        timeout,
+                        self.state.stand_pat_or_discard,
+                    )
+                elif self.state.can_fold():
+                    if timeout is None:
+                        timeout = self.folding_timeout
+
+                    self._call_state(
+                        None,
+                        timeout,
+                        self.state.fold,
+                    )
+                elif self.state.can_check_or_call():
+                    if timeout is None:
+                        timeout = self.checking_timeout
+
+                    self._call_state(
+                        None,
+                        timeout,
+                        self.state.check_or_call,
+                    )
+                elif self.state.can_post_bring_in():
+                    if timeout is None:
+                        timeout = self.bring_in_posting_timeout
+
+                    self._call_state(
+                        None,
+                        timeout,
+                        self.state.post_bring_in,
+                    )
+                elif self.state.can_show_or_muck_hole_cards():
+                    if timeout is None:
+                        timeout = self.hole_cards_showing_or_mucking_timeout
+
+                    self._call_state(
+                        None,
+                        timeout,
+                        self.state.show_or_muck_hole_cards,
+                    )
+                else:
+                    raise AssertionError
