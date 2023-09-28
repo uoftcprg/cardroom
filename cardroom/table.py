@@ -481,6 +481,9 @@ class Table:
         default_factory=sched.scheduler,
     )
 
+    def mainloop(self) -> None:
+        self._scheduler.run()
+
     def _call(
             self,
             timeout: float,
