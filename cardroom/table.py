@@ -13,7 +13,6 @@ from warnings import warn
 import sched
 
 from pokerkit import (
-    Automation,
     BettingStructure,
     CardsLike,
     Deck,
@@ -41,8 +40,6 @@ class Table:
     """The streets."""
     betting_structure: BettingStructure
     """The betting structure."""
-    automations: tuple[Automation, ...]
-    """The automations."""
     ante_trimming_status: bool
     """The ante trimming status.
 
@@ -465,7 +462,7 @@ class Table:
                 self.hand_types,
                 self.streets,
                 self.betting_structure,
-                self.automations,
+                (),
                 self.ante_trimming_status,
                 self.raw_antes,
                 self.raw_blinds_or_straddles,
