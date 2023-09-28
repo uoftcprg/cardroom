@@ -489,17 +489,14 @@ class Table:
             **kwargs: Any,
     ) -> None:
 
-        def nested_function() -> Operation | None:
+        def nested_function() -> None:
             try:
                 operation = function(*args, **kwargs)
 
                 self._update()
+                self.callback(self, operation)
             except:  # noqa: E722
                 warn(format_exc())
-
-                operation = None
-
-            return operation
 
         self._scheduler.enter(timeout, 0, nested_function)
 
