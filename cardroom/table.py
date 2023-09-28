@@ -55,6 +55,12 @@ class Table:
     """The raw blinds or straddles."""
     bring_in: int
     """The bring-in."""
+    timebank: float
+    """The timebank."""
+    timebank_increment: float
+    """The timebank increment."""
+    play_timeout: float
+    """The play timeout."""
     idle_timeout: float
     """The idle timeout."""
     ante_posting_timeout: float
@@ -100,11 +106,18 @@ class Table:
         default_factory=list,
     )
     """The buy-in, rebuy, top-off, or rat-holing amounts."""
-    idle_timestamps: list[datetime | None] = field(
+    active_timestamps: list[datetime | None] = field(
         init=False,
         default_factory=list,
     )
-    """The idle timestamps."""
+    """The active timestamps."""
+    inactive_timestamps: list[datetime | None] = field(
+        init=False,
+        default_factory=list,
+    )
+    """The inactive timestamps."""
+    timebanks: list[float | None] = field(init=False, default_factory=list)
+    """The timebanks."""
     state: State | None = field(init=False, default=None)
     """The state."""
     button_index: int | None = field(init=False, default=None)
@@ -116,7 +129,9 @@ class Table:
             self.player_indices.append(None)
             self.starting_stacks.append(None)
             self.buy_in_rebuy_top_off_or_rat_holing_amounts.append(None)
-            self.idle_timestamps.append(None)
+            self.active_timestamps.append(None)
+            self.inactive_timestamps.append(None)
+            self.timebanks.append(None)
 
     @property
     def seat_indices(self) -> range:
@@ -138,6 +153,13 @@ class Table:
         turn_index = None
 
         if self.state is not None:
+            assert (
+                (self.state.stander_pat_or_discarder_index is not None)
+                + (self.state.actor_index is not None)
+                + (self.state.showdown_index is not None)
+                == 1
+            )
+
             if self.state.stander_pat_or_discarder_index is not None:
                 turn_index = self.state.stander_pat_or_discarder_index
             elif self.state.actor_index is not None:
@@ -155,16 +177,8 @@ class Table:
         """
         return (
             self.player_names[seat_index] is not None
-            and not self.is_idle(seat_index)
+            and self.inactive_timestamps[seat_index] is not None
         )
-
-    def is_idle(self, seat_index: int) -> bool:
-        """Return the idle status of the player at the seat.
-
-        :param seat_index: The seat index.
-        :return: The idle status of the player at the seat.
-        """
-        return self.idle_timestamps[seat_index] is not None
 
     def get_seat_index(self, player_name_or_player_index: str | int) -> int:
         """Return the seat index of the player.
@@ -206,7 +220,9 @@ class Table:
         self.player_indices[seat_index] = None
         self.starting_stacks[seat_index] = None
         self.buy_in_rebuy_top_off_or_rat_holing_amounts[seat_index] = amount
-        self.idle_timestamps[seat_index] = None
+        self.active_timestamps[seat_index] = None
+        self.inactive_timestamps[seat_index] = None
+        self.timebanks[seat_index] = self.timebank
 
     def disconnect(self, player_name: str) -> None:
         """Disconnect the player.
@@ -218,7 +234,7 @@ class Table:
 
     def _disconnect(self, player_name: str) -> None:
         seat_index = self.get_seat_index(player_name)
-        self.idle_timestamps[seat_index] = datetime.utcfromtimestamp(0)
+        self.inactive_timestamps[seat_index] = datetime.utcfromtimestamp(0)
 
     def activate(self, player_name: str) -> None:
         """Activate the player.
@@ -230,7 +246,7 @@ class Table:
 
     def _activate(self, player_name: str) -> None:
         seat_index = self.get_seat_index(player_name)
-        self.idle_timestamps[seat_index] = None
+        self.inactive_timestamps[seat_index] = None
 
     def deactivate(self, player_name: str) -> None:
         """Deactivate the player.
@@ -242,7 +258,7 @@ class Table:
 
     def _deactivate(self, player_name: str) -> None:
         seat_index = self.get_seat_index(player_name)
-        self.idle_timestamps[seat_index] = datetime.now()
+        self.inactive_timestamps[seat_index] = datetime.now()
 
     def buy_in_rebuy_top_off_or_rat_hole(
             self,
@@ -356,15 +372,19 @@ class Table:
             for i in self.seat_indices:
                 player_index = self.player_indices[i]
 
-                if player_index is not None:
-                    self.starting_stacks[i] = self.state.stacks[player_index]
-                else:
+                if player_index is None:
                     self.starting_stacks[i] = None
+                else:
+                    self.starting_stacks[i] = self.state.stacks[player_index]
 
                 self.player_indices[i] = None
+                timebank = self.timebanks[i]
 
-            for i in self.seat_indices:
-                self.player_indices[i] = None
+                if timebank is not None:
+                    self.timebanks[i] = min(
+                        self.timebank,
+                        timebank + self.timebank_increment,
+                    )
 
             self.state = None
 
@@ -389,12 +409,13 @@ class Table:
 
                 self.starting_stacks[i] = None
 
-            idle_timestamp = self.idle_timestamps[i]
+            inactive_timestamp = self.inactive_timestamps[i]
 
             if (
-                    idle_timestamp is not None
+                    inactive_timestamp is not None
                     and (
-                        idle_timestamp + timedelta(seconds=self.idle_timeout)
+                        inactive_timestamp
+                        + timedelta(seconds=self.idle_timeout)
                         <= datetime.now()
                     )
             ):
@@ -402,7 +423,9 @@ class Table:
                 self.player_indices[i] = None
                 self.starting_stacks[i] = None
                 self.buy_in_rebuy_top_off_or_rat_holing_amounts[i] = None
-                self.idle_timestamps[i] = None
+                self.active_timestamps[i] = None
+                self.inactive_timestamps[i] = None
+                self.timebanks[i] = None
 
         active_seat_indices = deque(filter(self.is_active, self.seat_indices))
 
@@ -472,10 +495,12 @@ class Table:
         def nested_function() -> Operation | None:
             try:
                 operation = function(*args, **kwargs)
+
+                self._update()
             except:  # noqa: E722
                 warn(format_exc())
 
-            self._update()
+                operation = None
 
             return operation
 
@@ -523,14 +548,48 @@ class Table:
                 ):
                     raise ValueError('player not in action')
 
-            return function(self.state, *args, **kwargs)
+            if (
+                    self.turn_index is not None
+                    and self.state.showdown_index is None
+            ):
+                seat_index = self.get_seat_index(self.turn_index)
+                active_timestamp = self.active_timestamps[seat_index]
+                timebank = self.timebanks[seat_index]
+
+                assert active_timestamp is not None
+                assert timebank is not None
+
+                timebank_decrement = (
+                    (datetime.now() - active_timestamp).total_seconds()
+                )
+                self.timebanks[seat_index] = max(
+                    0,
+                    timebank - timebank_decrement,
+                )
+
+            operation = function(self.state, *args, **kwargs)
+
+            for i in self.seat_indices:
+                self.active_timestamps[seat_index] = None
+
+            if (
+                    self.turn_index is not None
+                    and self.state.showdown_index is None
+            ):
+                seat_index = self.get_seat_index(self.turn_index)
+                self.active_timestamps[seat_index] = datetime.now()
+
+            with self._counter_lock:
+                self._counter += 1
+
+            return operation
 
         with self._counter_lock:
             self._call(timeout, nested_function, self._counter)
 
     def _update(self) -> None:
-        if self.state is None:
-            self._call(0, self._play)
+        if self.state is None or not self.state.status:
+            self._call(self.play_timeout, self._play)
         else:
             if self.state.can_post_ante():
                 self._call_state(
@@ -588,14 +647,15 @@ class Table:
                 )
 
             if self.turn_index is not None:
-                assert self.turn_index is not None
-
                 seat_index = self.get_seat_index(self.turn_index)
+                timebank = self.timebanks[seat_index]
 
-                if self.is_idle(seat_index):
-                    timeout = self.skip_timeout
-                else:
+                assert timebank is not None
+
+                if self.is_active(seat_index):
                     timeout = None
+                else:
+                    timeout = self.skip_timeout
 
                 if self.state.can_stand_pat_or_discard():
                     if timeout is None:
@@ -603,7 +663,7 @@ class Table:
 
                     self._call_state(
                         None,
-                        timeout,
+                        timeout + timebank,
                         self.state.stand_pat_or_discard,
                     )
                 elif self.state.can_fold():
@@ -612,7 +672,7 @@ class Table:
 
                     self._call_state(
                         None,
-                        timeout,
+                        timeout + timebank,
                         self.state.fold,
                     )
                 elif self.state.can_check_or_call():
@@ -621,7 +681,7 @@ class Table:
 
                     self._call_state(
                         None,
-                        timeout,
+                        timeout + timebank,
                         self.state.check_or_call,
                     )
                 elif self.state.can_post_bring_in():
@@ -630,7 +690,7 @@ class Table:
 
                     self._call_state(
                         None,
-                        timeout,
+                        timeout + timebank,
                         self.state.post_bring_in,
                     )
                 elif self.state.can_show_or_muck_hole_cards():
@@ -639,7 +699,7 @@ class Table:
 
                     self._call_state(
                         None,
-                        timeout,
+                        timeout + timebank,
                         self.state.show_or_muck_hole_cards,
                     )
                 else:
