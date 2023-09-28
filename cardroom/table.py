@@ -173,7 +173,7 @@ class Table:
         :return: The active status of the player at the seat.
         """
         return (
-            self.player_names[seat_index] is not None
+            self.player_names[seat_index] is None
             and self.inactive_timestamps[seat_index] is not None
         )
 
