@@ -150,13 +150,6 @@ class Table:
         turn_index = None
 
         if self.state is not None:
-            assert (
-                (self.state.stander_pat_or_discarder_index is not None)
-                + (self.state.actor_index is not None)
-                + (self.state.showdown_index is not None)
-                == 1
-            )
-
             if self.state.stander_pat_or_discarder_index is not None:
                 turn_index = self.state.stander_pat_or_discarder_index
             elif self.state.actor_index is not None:
@@ -173,8 +166,8 @@ class Table:
         :return: The active status of the player at the seat.
         """
         return (
-            self.player_names[seat_index] is None
-            and self.inactive_timestamps[seat_index] is not None
+            self.player_names[seat_index] is not None
+            and self.inactive_timestamps[seat_index] is None
         )
 
     def get_seat_index(self, player_name_or_player_index: str | int) -> int:
@@ -212,6 +205,8 @@ class Table:
             raise ValueError('seat index out of bounds')
         elif amount < 0:
             raise ValueError('negative amount')
+        elif self.player_names[seat_index] is not None:
+            raise ValueError('occupied seat')
 
         self.player_names[seat_index] = player_name
         self.player_indices[seat_index] = None
@@ -567,7 +562,7 @@ class Table:
             operation = function(self.state, *args, **kwargs)
 
             for i in self.seat_indices:
-                self.active_timestamps[seat_index] = None
+                self.active_timestamps[i] = None
 
             if (
                     self.turn_index is not None
