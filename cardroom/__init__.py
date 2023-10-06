@@ -3,6 +3,8 @@
 All cardroom tools are imported here.
 """
 
-__all__ = ('Table',)
+__all__ = 'Scheduler', 'Table', 'Tournament',
 
 from cardroom.table import Table
+from cardroom.tournament import Tournament
+from cardroom.utilities import Scheduler

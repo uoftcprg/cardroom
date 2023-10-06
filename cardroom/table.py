@@ -10,7 +10,6 @@ from threading import Lock
 from traceback import format_exc
 from typing import Any
 from warnings import warn
-import sched
 
 from pokerkit import (
     BettingStructure,
@@ -22,6 +21,8 @@ from pokerkit import (
     Street,
     ValuesLike,
 )
+
+from cardroom.utilities import Scheduler
 
 
 @dataclass
@@ -226,7 +227,7 @@ class Table:
 
     def _disconnect(self, player_name: str) -> None:
         seat_index = self.get_seat_index(player_name)
-        self.inactive_timestamps[seat_index] = datetime.utcfromtimestamp(0)
+        self.inactive_timestamps[seat_index] = datetime.min
 
     def activate(self, player_name: str) -> None:
         """Activate the player.
@@ -471,13 +472,13 @@ class Table:
 
             self.button_index = None
 
-    _scheduler: sched.scheduler = field(
-        init=False,
-        default_factory=sched.scheduler,
-    )
+    _scheduler: Scheduler = field(init=False, default_factory=Scheduler)
 
-    def mainloop(self) -> None:
+    def run(self) -> None:
         self._scheduler.run()
+
+    def stop(self) -> None:
+        self._scheduler.stop()
 
     def _call(
             self,
@@ -496,7 +497,7 @@ class Table:
             except:  # noqa: E722
                 warn(format_exc())
 
-        self._scheduler.enter(timeout, 0, nested_function)
+        self._scheduler.schedule(timeout, nested_function)
 
     _counter: int = field(init=False, default=0)
     _counter_lock: Lock = field(init=False, default_factory=Lock)
