@@ -53,6 +53,8 @@ class Table:
     """The raw blinds or straddles."""
     bring_in: int
     """The bring-in."""
+    buy_in_range: range
+    """The buy-in range."""
     timebank: float
     """The timebank."""
     timebank_increment: float
@@ -160,6 +162,14 @@ class Table:
 
         return turn_index
 
+    def is_occupied(self, seat_index: int) -> bool:
+        """Return the occupation status of the seat.
+
+        :param seat_index: The seat index.
+        :return: The occupation status of the seat.
+        """
+        return self.player_names[seat_index] is not None
+
     def is_active(self, seat_index: int) -> bool:
         """Return the active status of the player at the seat.
 
@@ -167,8 +177,26 @@ class Table:
         :return: The active status of the player at the seat.
         """
         return (
-            self.player_names[seat_index] is not None
+            self.is_occupied(seat_index)
             and self.inactive_timestamps[seat_index] is None
+        )
+
+    def is_kickable(self, seat_index: int) -> bool:
+        """Return the kickable status of the player at the seat.
+
+        :param seat_index: The seat index.
+        :return: The kickable status of the player at the seat.
+        """
+        inactive_timestamp = self.inactive_timestamps[seat_index]
+
+        return (
+            self.is_occupied(seat_index)
+            and inactive_timestamp is not None
+            and (
+                inactive_timestamp
+                + timedelta(seconds=self.idle_timeout)
+                <= datetime.now()
+            )
         )
 
     def get_seat_index(self, player_name_or_player_index: str | int) -> int:
@@ -206,7 +234,9 @@ class Table:
             raise ValueError('seat index out of bounds')
         elif amount < 0:
             raise ValueError('negative amount')
-        elif self.player_names[seat_index] is not None:
+        elif amount not in self.buy_in_range:
+            raise ValueError('invalid buy-in amount')
+        elif self.is_occupied(seat_index):
             raise ValueError('occupied seat')
 
         self.player_names[seat_index] = player_name
@@ -251,7 +281,9 @@ class Table:
 
     def _deactivate(self, player_name: str) -> None:
         seat_index = self.get_seat_index(player_name)
-        self.inactive_timestamps[seat_index] = datetime.now()
+
+        if self.inactive_timestamps[seat_index] is None:
+            self.inactive_timestamps[seat_index] = datetime.now()
 
     def buy_in_rebuy_top_off_or_rat_hole(
             self,
@@ -278,6 +310,8 @@ class Table:
     ) -> None:
         if amount < 0:
             raise ValueError('negative amount')
+        elif amount not in self.buy_in_range:
+            raise ValueError('invalid buy-in amount')
 
         self._activate(player_name)
 
@@ -358,7 +392,7 @@ class Table:
         )
 
     def _play(self) -> None:
-        if self.state:
+        if self.state is not None:
             if self.state.status:
                 raise ValueError('state active')
 
@@ -392,7 +426,6 @@ class Table:
 
             self.buy_in_rebuy_top_off_or_rat_holing_amounts[i] = None
 
-        for i in self.seat_indices:
             if self.starting_stacks[i] == 0:
                 player_name = self.player_names[i]
 
@@ -401,24 +434,6 @@ class Table:
                 self._deactivate(player_name)
 
                 self.starting_stacks[i] = None
-
-            inactive_timestamp = self.inactive_timestamps[i]
-
-            if (
-                    inactive_timestamp is not None
-                    and (
-                        inactive_timestamp
-                        + timedelta(seconds=self.idle_timeout)
-                        <= datetime.now()
-                    )
-            ):
-                self.player_names[i] = None
-                self.player_indices[i] = None
-                self.starting_stacks[i] = None
-                self.buy_in_rebuy_top_off_or_rat_holing_amounts[i] = None
-                self.active_timestamps[i] = None
-                self.inactive_timestamps[i] = None
-                self.timebanks[i] = None
 
         active_seat_indices = deque(filter(self.is_active, self.seat_indices))
 
@@ -453,24 +468,27 @@ class Table:
 
                 starting_stacks.append(starting_stack)
 
-            self.state = State(
-                self.deck,
-                self.hand_types,
-                self.streets,
-                self.betting_structure,
-                (),
-                self.ante_trimming_status,
-                self.raw_antes,
-                self.raw_blinds_or_straddles,
-                self.bring_in,
-                starting_stacks,
-                len(starting_stacks),
-            )
+            self.state = self._create_state(starting_stacks)
         else:
             for i in self.seat_indices:
                 self.player_indices[i] = None
 
             self.button_index = None
+
+    def _create_state(self, starting_stacks: list[int]) -> State:
+        return State(
+            (),
+            self.deck,
+            self.hand_types,
+            self.streets,
+            self.betting_structure,
+            self.ante_trimming_status,
+            self.raw_antes,
+            self.raw_blinds_or_straddles,
+            self.bring_in,
+            starting_stacks,
+            len(starting_stacks),
+        )
 
     _scheduler: Scheduler = field(init=False, default_factory=Scheduler)
 
@@ -582,6 +600,16 @@ class Table:
 
     def _update(self) -> None:
         if self.state is None or not self.state.status:
+            for i in self.seat_indices:
+                if self.is_kickable(i):
+                    self.player_names[i] = None
+                    self.player_indices[i] = None
+                    self.starting_stacks[i] = None
+                    self.buy_in_rebuy_top_off_or_rat_holing_amounts[i] = None
+                    self.active_timestamps[i] = None
+                    self.inactive_timestamps[i] = None
+                    self.timebanks[i] = None
+
             self._call(self.play_timeout, self._play)
         else:
             if self.state.can_post_ante():
@@ -652,48 +680,35 @@ class Table:
 
                 if self.state.can_stand_pat_or_discard():
                     if timeout is None:
-                        timeout = self.standing_pat_timeout
+                        timeout = self.standing_pat_timeout + timebank
 
-                    self._call_state(
-                        None,
-                        timeout + timebank,
-                        self.state.stand_pat_or_discard,
-                    )
+                    self._call_state(None, timeout, State.stand_pat_or_discard)
                 elif self.state.can_fold():
                     if timeout is None:
-                        timeout = self.folding_timeout
+                        timeout = self.folding_timeout + timebank
 
-                    self._call_state(
-                        None,
-                        timeout + timebank,
-                        self.state.fold,
-                    )
+                    self._call_state(None, timeout, State.fold)
                 elif self.state.can_check_or_call():
                     if timeout is None:
-                        timeout = self.checking_timeout
+                        timeout = self.checking_timeout + timebank
 
-                    self._call_state(
-                        None,
-                        timeout + timebank,
-                        self.state.check_or_call,
-                    )
+                    self._call_state(None, timeout, State.check_or_call)
                 elif self.state.can_post_bring_in():
                     if timeout is None:
-                        timeout = self.bring_in_posting_timeout
+                        timeout = self.bring_in_posting_timeout + timebank
 
-                    self._call_state(
-                        None,
-                        timeout + timebank,
-                        self.state.post_bring_in,
-                    )
+                    self._call_state(None, timeout, State.post_bring_in)
                 elif self.state.can_show_or_muck_hole_cards():
                     if timeout is None:
-                        timeout = self.hole_cards_showing_or_mucking_timeout
+                        timeout = (
+                            self.hole_cards_showing_or_mucking_timeout
+                            + timebank
+                        )
 
                     self._call_state(
                         None,
-                        timeout + timebank,
-                        self.state.show_or_muck_hole_cards,
+                        timeout,
+                        State.show_or_muck_hole_cards,
                     )
                 else:
                     raise AssertionError

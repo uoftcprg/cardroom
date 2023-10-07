@@ -50,7 +50,8 @@ setup(
         'Source': 'https://github.com/uoftcprg/cardroom',
         'Tracker': 'https://github.com/uoftcprg/cardroom/issues',
     },
-    package_data={'cardroom': ['py.typed']},
     packages=find_packages(),
+    install_requires=['pokerkit~=0.3.0'],
     python_requires='>=3.11',
+    package_data={'cardroom': ['py.typed']},
 )

@@ -4,26 +4,20 @@ utilities.
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import partial
 from queue import Queue
-from threading import Timer
-from typing import Any
+from threading import Lock, Timer
+from typing import Any, ClassVar, TypeAlias
 
 
 @dataclass
 class Scheduler:
     """The class for schedulers."""
 
-    @dataclass
-    class Event:
-        """The class for events."""
-        function: Callable[..., Any]
-        """The funciton."""
-        args: tuple[Any, ...]
-        """The arguments."""
-        kwargs: dict[str, Any]
-        """The keyword arguments."""
-
+    Event: ClassVar[TypeAlias] = Any
     _events: Queue[Event | None] = field(init=False, default_factory=Queue)
+    _timers: dict[Event, Timer] = field(init=False, default_factory=dict)
+    _lock: Lock = field(init=False, default_factory=Lock)
 
     def run(self) -> None:
         """Run the scheduler.
@@ -31,7 +25,16 @@ class Scheduler:
         :return: ``None``.
         """
         while (event := self._events.get()) is not None:
-            event.function(*event.args, **event.kwargs)
+            event()
+            self.cancel(event)
+
+        with self._lock:
+            timers = tuple(self._timers.values())
+
+            self._timers.clear()
+
+        for timer in timers:
+            timer.cancel()
 
     def stop(self) -> None:
         """Stop the scheduler.
@@ -55,13 +58,27 @@ class Scheduler:
         :param kwargs: The keyword arguments.
         :return: The scheduled event.
         """
-        event = self.Event(function, args, kwargs)
-        timer = Timer(
-            timeout,
-            self._events.put,
-            args=[event],
-        )
+        event = partial(self._events.put, partial(function, *args, *kwargs))
+        timer = Timer(timeout, event)
+
+        with self._lock:
+            self._timers[event] = timer
 
         timer.start()
 
         return event
+
+    def cancel(self, event: Event) -> None:
+        """Cancel an event.
+
+        :param event: The event.
+        :return: ``None``.
+        """
+        with self._lock:
+            try:
+                timer = self._timers.pop(event)
+            except KeyError:
+                timer = None
+
+        if timer is not None:
+            timer.cancel()
