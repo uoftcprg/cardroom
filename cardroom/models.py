@@ -4,6 +4,7 @@ from dataclasses import fields
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from pokerkit import ValuesLike
 import pokerkit
 
 from cardroom.utilities import get_divmod
@@ -51,11 +52,20 @@ class Poker(models.Model):
         return self.name
 
     def load(self) -> pokerkit.Poker:
+
+        def clean(raw_values: ValuesLike) -> ValuesLike:
+            if isinstance(raw_values, dict):
+                raw_values = dict(
+                    zip(map(int, raw_values.keys()), raw_values.values()),
+                )
+
+            return raw_values
+
         kwargs = {
             'automations': (),
             'ante_trimming_status': self.ante_trimming_status,
-            'raw_antes': self.raw_antes,
-            'raw_blinds_or_straddles': self.raw_blinds_or_straddles,
+            'raw_antes': clean(self.raw_antes),
+            'raw_blinds_or_straddles': clean(self.raw_blinds_or_straddles),
             'bring_in': self.bring_in,
             'small_bet': self.small_bet,
             'big_bet': self.big_bet,
