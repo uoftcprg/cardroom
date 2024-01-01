@@ -51,8 +51,8 @@ setup(
     },
     packages=find_packages(),
     install_requires=[
-        'channels[daphne]>=4.0.0<5',
-        'Django>=4.2.8<5',
+        'channels[daphne]>=4.0.0,<5',
+        'Django>=4.2.8,<5',
         'pokerkit~=0.4.4',
     ],
     python_requires='>=3.11',
