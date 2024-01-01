@@ -37,6 +37,7 @@ class Variant(models.TextChoices):
 
 
 class Poker(models.Model):
+    name = models.CharField(max_length=255, unique=True)
     variant = models.CharField(max_length=255, choices=Variant.choices)
     ante_trimming_status = models.BooleanField(default=False)
     raw_antes = models.JSONField()
@@ -45,6 +46,9 @@ class Poker(models.Model):
     small_bet = models.JSONField(blank=True, null=True)
     big_bet = models.JSONField(blank=True, null=True)
     min_bet = models.JSONField(blank=True, null=True)
+
+    def __str__(self) -> str:
+        return self.name
 
     def load(self) -> pokerkit.Poker:
         kwargs = {
@@ -65,12 +69,19 @@ class Poker(models.Model):
 
         return pokerkit.HandHistory.game_types[self.variant](**kwargs)
 
+    class Meta:
+        verbose_name_plural = 'poker'
+
 
 class Table(models.Model):
+    name = models.CharField(max_length=255, unique=True)
     game = models.ForeignKey(Poker, models.PROTECT)
     seat_count = models.PositiveBigIntegerField()
     min_starting_stack = models.JSONField(blank=True, null=True)
     max_starting_stack = models.JSONField(blank=True, null=True)
+
+    def __str__(self) -> str:
+        return self.name
 
     def load(self) -> table.Table:
         return table.Table(
@@ -123,3 +134,6 @@ class HandHistory(models.Model):
             kwargs[field.name] = getattr(self, field.name)
 
         return pokerkit.HandHistory(**kwargs)
+
+    class Meta:
+        verbose_name_plural = 'hand histories'
