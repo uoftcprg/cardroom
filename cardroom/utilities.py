@@ -65,3 +65,7 @@ def get_parse_value() -> Callable[[str], int]:
 
 def get_decimal_places() -> int | float:
     return getattr(settings, 'CARDROOM_DECIMAL_PLACES', DEFAULT_DECIMAL_PLACES)
+
+
+def get_admin_urls() -> bool:
+    return getattr(settings, 'CARDROOM_ADMIN_URLS', False)

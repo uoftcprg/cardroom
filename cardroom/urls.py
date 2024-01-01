@@ -1,9 +1,10 @@
-from django.conf import settings
 from django.contrib import admin
 from django.urls import path, URLResolver
+
+from cardroom.utilities import get_admin_urls
 
 urlpatterns: list[URLResolver] = [
 ]
 
-if getattr(settings, 'CARDROOM_ADMIN_URLS', False):
+if get_admin_urls():
     urlpatterns.append(path('admin/', admin.site.urls))
