@@ -117,7 +117,6 @@ class Table:
     min_starting_stack: int
     max_starting_stack: int
     button: Button = field(init=False)
-    status: bool = field(default=True, init=False)
     seats: list[Seat] = field(default_factory=list, init=False)
     state: State | None = field(default=None, init=False)
 
@@ -213,14 +212,10 @@ class Table:
 
         return seat
 
-    def _verify_operation(self) -> None:
-        if not self.status:
-            raise ValueError('terminated')
-
     # game changing
 
     def verify_game_changing(self, game: Poker) -> None:
-        self._verify_operation()
+        pass
 
     def can_change_game(self, game: Poker) -> bool:
         try:
@@ -235,29 +230,9 @@ class Table:
 
         self.game = game
 
-    # termination
-
-    def verify_termination(self) -> None:
-        self._verify_operation()
-
-    def can_terminate(self) -> bool:
-        try:
-            self.verify_termination()
-        except ValueError:
-            return False
-
-        return True
-
-    def terminate(self) -> None:
-        self.verify_termination()
-
-        self.status = False
-
     # state management
 
     def verify_state_construction(self) -> None:
-        self._verify_operation()
-
         if self.state is not None and self.state.status:
             raise ValueError('state already constructed')
         elif self.ready_or_postable_count < 2:
@@ -291,8 +266,6 @@ class Table:
         self.state = self.game(starting_stacks, player_count)
 
     def verify_state_destruction(self) -> None:
-        self._verify_operation()
-
         if self.state is None:
             raise ValueError('state already destroyed')
         elif self.state.status:
@@ -331,8 +304,6 @@ class Table:
     # player management
 
     def verify_sitting(self, user: str, seat_index: int) -> None:
-        self._verify_operation()
-
         for seat in self.seats:
             if seat.user == user:
                 raise ValueError('user already joined')
@@ -361,8 +332,6 @@ class Table:
         seat.starting_stack = None
 
     def verify_leaving(self, user: str) -> Seat:
-        self._verify_operation()
-
         seat = self.get_seat(user)
 
         if seat.player_status:
@@ -390,8 +359,6 @@ class Table:
         seat.starting_stack = None
 
     def verify_sitting_out(self, user: str) -> Seat:
-        self._verify_operation()
-
         seat = self.get_seat(user)
 
         if not seat.active_status:
@@ -412,8 +379,6 @@ class Table:
         seat.active_status = False
 
     def verify_resumption(self, user: str) -> Seat:
-        self._verify_operation()
-
         seat = self.get_seat(user)
 
         if seat.active_status:
@@ -438,8 +403,6 @@ class Table:
             user: str,
             starting_stack: int,
     ) -> Seat:
-        self._verify_operation()
-
         seat = self.get_seat(user)
 
         if not seat.active_status:
