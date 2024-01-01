@@ -2,14 +2,11 @@
 
 from setuptools import find_packages, setup
 
-with open('README.rst', 'r') as file:
-    long_description = file.read()
-
 setup(
     name='cardroom',
-    version='0.0.0',
-    description='Poker tournament and table management library',
-    long_description=long_description,
+    version='0.0.1',
+    description='A Django application for poker tournament and table management',
+    long_description=open('README.rst').read(),
     long_description_content_type='text/x-rst',
     url='https://github.com/uoftcprg/cardroom',
     author='University of Toronto Computer Poker Research Group',
@@ -33,6 +30,8 @@ setup(
         'Programming Language :: Python :: 3.12',
     ],
     keywords=[
+        'channels',
+        'django',
         'game',
         'game-development',
         'holdem-poker',
@@ -51,7 +50,11 @@ setup(
         'Tracker': 'https://github.com/uoftcprg/cardroom/issues',
     },
     packages=find_packages(),
-    install_requires=['pokerkit~=0.3.0'],
+    install_requires=[
+        'channels[daphne]>=4.0.0<5',
+        'Django>=4.2.8<5',
+        'pokerkit~=0.4.4',
+    ],
     python_requires='>=3.11',
     package_data={'cardroom': ['py.typed']},
 )

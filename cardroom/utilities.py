@@ -1,84 +1,67 @@
-""":mod:`cardroom.utilities` implements classes related to cardroom
-utilities.
-"""
-
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from functools import partial
-from queue import Queue
-from threading import Lock, Timer
-from typing import Any, ClassVar, TypeAlias
+from math import inf
+from typing import cast
+import math
+
+from django.conf import settings
+from django.utils.module_loading import import_string
+import pokerkit
+
+DEFAULT_DIVMOD: str = 'cardroom.utilities.divmod'
+DEFAULT_PARSE_VALUE: str = 'cardroom.utilities.parse_value'
+DEFAULT_DECIMAL_PLACES: int | float = inf
+_divmod = divmod
 
 
-@dataclass
-class Scheduler:
-    """The class for schedulers."""
+def divmod(dividend: int, divisor: int) -> tuple[int, int]:
+    quotient: int | float
+    remainder: int | float
 
-    Event: ClassVar[TypeAlias] = Any
-    _events: Queue[Event | None] = field(init=False, default_factory=Queue)
-    _timers: dict[Event, Timer] = field(init=False, default_factory=dict)
-    _lock: Lock = field(init=False, default_factory=Lock)
+    match get_decimal_places():
+        case 0:
+            quotient, remainder = _divmod(int(dividend), int(divisor))
+        case math.inf:
+            quotient, remainder = dividend / divisor, 0
+        case decimal_places:
+            assert isinstance(decimal_places, int)
 
-    def run(self) -> None:
-        """Run the scheduler.
+            quotient = round(dividend / divisor, decimal_places)
+            remainder = dividend - quotient * divisor
 
-        :return: ``None``.
-        """
-        while (event := self._events.get()) is not None:
-            event()
-            self.cancel(event)
+    return cast(tuple[int, int], (quotient, remainder))
 
-        with self._lock:
-            timers = tuple(self._timers.values())
 
-            self._timers.clear()
+def parse_value(raw_value: str) -> int:
+    value = pokerkit.parse_value(raw_value)
 
-        for timer in timers:
-            timer.cancel()
+    match get_decimal_places():
+        case 0:
+            value = int(value)
+        case math.inf:
+            pass
+        case decimal_places:
+            assert isinstance(decimal_places, int)
 
-    def stop(self) -> None:
-        """Stop the scheduler.
+            value = round(value, decimal_places)
 
-        :return: ``None``.
-        """
-        self._events.put(None)
+    return value
 
-    def schedule(
-            self,
-            timeout: float,
-            function: Callable[..., Any],
-            *args: Any,
-            **kwargs: Any,
-    ) -> Event:
-        """Schedule an event.
 
-        :param timeout: The timeout.
-        :param function: The function.
-        :param args: The arguments.
-        :param kwargs: The keyword arguments.
-        :return: The scheduled event.
-        """
-        event = partial(self._events.put, partial(function, *args, *kwargs))
-        timer = Timer(timeout, event)
+def get_divmod() -> Callable[[int, int], tuple[int, int]]:
+    return cast(
+        Callable[[int, int], tuple[int, int]],
+        import_string(getattr(settings, 'CARDROOM_DIVMOD', DEFAULT_DIVMOD)),
+    )
 
-        with self._lock:
-            self._timers[event] = timer
 
-        timer.start()
+def get_parse_value() -> Callable[[str], int]:
+    return cast(
+        Callable[[str], int],
+        import_string(
+            getattr(settings, 'CARDROOM_PARSE_VALUE', DEFAULT_PARSE_VALUE),
+        ),
+    )
 
-        return event
 
-    def cancel(self, event: Event) -> None:
-        """Cancel an event.
-
-        :param event: The event.
-        :return: ``None``.
-        """
-        with self._lock:
-            try:
-                timer = self._timers.pop(event)
-            except KeyError:
-                timer = None
-
-        if timer is not None:
-            timer.cancel()
+def get_decimal_places() -> int | float:
+    return getattr(settings, 'CARDROOM_DECIMAL_PLACES', DEFAULT_DECIMAL_PLACES)
