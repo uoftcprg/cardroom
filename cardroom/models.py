@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import fields
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from pokerkit import ValuesLike
@@ -137,11 +139,30 @@ class HandHistory(models.Model):
     time_limit = models.JSONField(blank=True, null=True)
     time_banks = models.JSONField(blank=True, null=True)
 
+    @classmethod
+    def get_field_names(cls) -> Iterator[str]:
+        for field in fields(pokerkit.HandHistory):
+            try:
+                cls._meta.get_field(field.name)
+            except FieldDoesNotExist:
+                pass
+            else:
+                yield field.name
+
+    @classmethod
+    def dump(cls, hh: pokerkit.HandHistory) -> HandHistory:
+        kwargs = {}
+
+        for name in cls.get_field_names():
+            kwargs[name] = getattr(hh, name)
+
+        return cls(**kwargs)
+
     def load(self) -> pokerkit.HandHistory:
         kwargs = {}
 
-        for field in fields(pokerkit.HandHistory):
-            kwargs[field.name] = getattr(self, field.name)
+        for name in self.get_field_names():
+            kwargs[name] = getattr(self, name)
 
         return pokerkit.HandHistory(**kwargs)
 

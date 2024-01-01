@@ -310,7 +310,7 @@ class Table:
 
         if seat_index not in self.seat_indices:
             raise ValueError('invalid seat index')
-        elif not self.seats[seat_index].user_status:
+        elif self.seats[seat_index].user_status:
             raise ValueError('seat occupied')
 
     def can_sit(self, user: str, seat_index: int) -> bool:
@@ -378,7 +378,7 @@ class Table:
         seat = self.verify_sitting_out(user)
         seat.active_status = False
 
-    def verify_resumption(self, user: str) -> Seat:
+    def verify_being_back(self, user: str) -> Seat:
         seat = self.get_seat(user)
 
         if seat.active_status:
@@ -386,16 +386,16 @@ class Table:
 
         return seat
 
-    def can_resume(self, user: str) -> bool:
+    def can_be_back(self, user: str) -> bool:
         try:
-            self.verify_resumption(user)
+            self.verify_being_back(user)
         except ValueError:
             return False
 
         return True
 
-    def resume(self, user: str) -> None:
-        seat = self.verify_resumption(user)
+    def be_back(self, user: str) -> None:
+        seat = self.verify_being_back(user)
         seat.active_status = True
 
     def verify_rebuying_or_topping_off(
@@ -411,6 +411,11 @@ class Table:
             raise ValueError('below minimum starting stack')
         elif starting_stack > self.max_starting_stack:
             raise ValueError('above maximum starting stack')
+        elif (
+                seat.starting_stack is not None
+                and seat.starting_stack >= starting_stack
+        ):
+            raise ValueError('rat-holing is not allowed')
 
         return seat
 
@@ -424,6 +429,4 @@ class Table:
 
     def rebuy_or_top_off(self, user: str, starting_stack: int) -> None:
         seat = self.verify_rebuying_or_topping_off(user, starting_stack)
-
-        if seat.starting_stack is None or seat.starting_stack < starting_stack:
-            seat.starting_stack = starting_stack
+        seat.starting_stack = starting_stack

@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from math import inf
+from math import inf, floor
 from typing import cast
 import math
 
@@ -25,7 +25,10 @@ def divmod(dividend: int, divisor: int) -> tuple[int, int]:
         case decimal_places:
             assert isinstance(decimal_places, int)
 
-            quotient = round(dividend / divisor, decimal_places)
+            quotient = (
+                floor(dividend / divisor * 10 ** decimal_places)
+                / (10 ** decimal_places)
+            )
             remainder = dividend - quotient * divisor
 
     return cast(tuple[int, int], (quotient, remainder))
