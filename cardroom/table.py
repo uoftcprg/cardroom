@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from collections import deque
 from dataclasses import dataclass, field
 from random import choice
+from warnings import warn
 
 from pokerkit import Poker, State
 
@@ -34,13 +35,16 @@ class Button:
                 self.seat_index = None
 
             if self.seat_index is None:
-                seats = deque(self.table.ready_or_postable_seats)
-                self.seat_index = choice(seats).index
+                self.seat_index = choice(
+                    tuple(self.table.ready_or_postable_indices),
+                )
+
+                for seat in self.table.seats:
+                    seat.wait_status = False
             else:
                 seats = deque(self.table.seats)
 
-                while seats[0].index <= self.seat_index:
-                    seats.rotate(-1)
+                seats.rotate(-self.seat_index - 1)
 
                 while not seats[0].ready_status:
                     seats[0].wait_status = False
@@ -82,7 +86,9 @@ class Seat:
 
     @property
     def index(self) -> int:
-        return self.table.seats.index(self)
+        return next(
+            i for i, seat in enumerate(self.table.seats) if self is seat
+        )
 
     @property
     def user_status(self) -> bool:
@@ -96,10 +102,6 @@ class Seat:
             and self.starting_stack is not None
             and self.starting_stack > 0
         )
-
-    @property
-    def postable_status(self) -> bool:
-        return self.ready_or_postable_status and self.wait_status
 
     @property
     def ready_status(self) -> bool:
@@ -159,21 +161,6 @@ class Table:
     @property
     def ready_or_postable_count(self) -> int:
         return len(tuple(self.ready_or_postable_indices))
-
-    @property
-    def postable_indices(self) -> Iterator[int]:
-        for seat in self.seats:
-            if seat.postable_status:
-                yield seat.index
-
-    @property
-    def postable_seats(self) -> Iterator[Seat]:
-        for i in self.postable_indices:
-            yield self.seats[i]
-
-    @property
-    def postable_count(self) -> int:
-        return len(tuple(self.postable_indices))
 
     @property
     def ready_indices(self) -> Iterator[int]:
@@ -291,8 +278,10 @@ class Table:
 
                 stack = self.state.stacks[seat.player_index]
 
-                if seat.starting_stack is None or seat.starting_stack < stack:
+                if seat.starting_stack is None:
                     seat.starting_stack = stack
+                elif stack > seat.starting_stack:
+                    warn('rat-holing')
 
             seat.player_index = None
 
@@ -413,9 +402,9 @@ class Table:
             raise ValueError('above maximum starting stack')
         elif (
                 seat.starting_stack is not None
-                and seat.starting_stack >= starting_stack
+                and seat.starting_stack > starting_stack
         ):
-            raise ValueError('rat-holing is not allowed')
+            warn('rat-holing')
 
         return seat
 
