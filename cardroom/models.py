@@ -197,7 +197,7 @@ class HandHistory(models.Model):
     def load(self) -> pokerkit.HandHistory:
         kwargs = {}
 
-        for name in self.get_field_names():
+        for name in type(self).get_field_names():
             kwargs[name] = getattr(self, name)
 
         return pokerkit.HandHistory(**kwargs)
