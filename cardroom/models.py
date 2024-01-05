@@ -9,7 +9,8 @@ from django.utils.translation import gettext_lazy as _
 from pokerkit import ValuesLike
 import pokerkit
 
-from cardroom.utilities import get_divmod
+from cardroom.utilities import get_divmod, get_parse_value, get_tzinfo
+import cardroom.controller as controller
 import cardroom.table as table
 
 
@@ -86,14 +87,10 @@ class Poker(models.Model):
 
 
 class Table(models.Model):
-    name = models.CharField(max_length=255, unique=True)
     game = models.ForeignKey(Poker, models.PROTECT)
     seat_count = models.PositiveBigIntegerField()
     min_starting_stack = models.JSONField(blank=True, null=True)
     max_starting_stack = models.JSONField(blank=True, null=True)
-
-    def __str__(self) -> str:
-        return self.name
 
     def load(self) -> table.Table:
         return table.Table(
@@ -101,6 +98,45 @@ class Table(models.Model):
             self.seat_count,
             self.min_starting_stack,
             self.max_starting_stack,
+        )
+
+
+class Controller(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    time_bank = models.FloatField()
+    time_bank_increment = models.FloatField()
+    state_construction_timeout = models.FloatField()
+    state_destruction_timeout = models.FloatField()
+    idle_timeout = models.FloatField()
+    standing_pat_timeout = models.FloatField()
+    betting_timeout = models.FloatField()
+    hole_cards_showing_or_mucking_timeout = models.FloatField()
+
+    def __str__(self) -> str:
+        return self.name
+
+    class Meta:
+        abstract = True
+
+
+class CashGame(Controller):
+    table = models.ForeignKey(Table, models.PROTECT)
+
+    def load(self) -> controller.CashGame:
+        return controller.CashGame(
+            self.name,
+            self.time_bank,
+            self.time_bank_increment,
+            self.state_construction_timeout,
+            self.state_destruction_timeout,
+            self.idle_timeout,
+            self.standing_pat_timeout,
+            self.betting_timeout,
+            self.hole_cards_showing_or_mucking_timeout,
+            lambda _: None,  # TODO
+            get_parse_value(),
+            get_tzinfo(),
+            self.table.load(),
         )
 
 

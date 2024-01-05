@@ -143,6 +143,6 @@ CARDROOM_DECIMAL_PLACES = 0
 #
 # CARDROOM_DECIMAL_PLACES = 2
 
-# # Enable admin urls
-#
-# CARDROOM_ADMIN_URLS = True
+# Enable admin urls
+
+CARDROOM_ADMIN_URLS = True

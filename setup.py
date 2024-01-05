@@ -52,8 +52,8 @@ setup(
     packages=find_packages(),
     install_requires=[
         'channels[daphne]>=4.0.0,<5',
-        'Django>=4.2.8,<5',
-        'pokerkit~=0.4.4',
+        'Django>=4.2.9,<5',
+        'pokerkit~=0.4.5',
     ],
     python_requires='>=3.11',
     package_data={'cardroom': ['py.typed']},

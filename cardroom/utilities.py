@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from math import inf, floor
 from typing import cast
+from zoneinfo import ZoneInfo
 import math
 
 from django.conf import settings
@@ -72,3 +73,7 @@ def get_decimal_places() -> int | float:
 
 def get_admin_urls() -> bool:
     return getattr(settings, 'CARDROOM_ADMIN_URLS', False)
+
+
+def get_tzinfo() -> ZoneInfo:
+    return ZoneInfo(getattr(settings, 'TIME_ZONE', 'UTC'))

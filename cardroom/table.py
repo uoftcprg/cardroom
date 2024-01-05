@@ -387,7 +387,7 @@ class Table:
         seat = self.verify_being_back(user)
         seat.active_status = True
 
-    def verify_rebuying_or_topping_off(
+    def verify_rebuying_topping_off_or_rat_holing(
             self,
             user: str,
             starting_stack: int,
@@ -408,14 +408,28 @@ class Table:
 
         return seat
 
-    def can_rebuy_or_top_off(self, user: str, starting_stack: int) -> bool:
+    def can_rebuy_top_off_or_rat_hole(
+            self,
+            user: str,
+            starting_stack: int,
+    ) -> bool:
         try:
-            self.verify_rebuying_or_topping_off(user, starting_stack)
+            self.verify_rebuying_topping_off_or_rat_holing(
+                user,
+                starting_stack,
+            )
         except ValueError:
             return False
 
         return True
 
-    def rebuy_or_top_off(self, user: str, starting_stack: int) -> None:
-        seat = self.verify_rebuying_or_topping_off(user, starting_stack)
+    def rebuy_top_off_or_rat_hole(
+            self,
+            user: str,
+            starting_stack: int,
+    ) -> None:
+        seat = self.verify_rebuying_topping_off_or_rat_holing(
+            user,
+            starting_stack,
+        )
         seat.starting_stack = starting_stack
