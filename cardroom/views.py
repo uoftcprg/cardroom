@@ -1,3 +1,11 @@
-from django.shortcuts import render
+from django.views.generic import DetailView
 
-# Create your views here.
+from cardroom.models import CashGame, HandHistory
+
+
+class CashGameDetailView(DetailView):  # type: ignore[type-arg]
+    model = CashGame
+
+
+class HandHistoryDetailView(DetailView):  # type: ignore[type-arg]
+    model = HandHistory

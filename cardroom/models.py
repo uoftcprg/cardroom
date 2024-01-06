@@ -6,9 +6,11 @@ from dataclasses import fields
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.urls import NoReverseMatch, reverse
 from pokerkit import ValuesLike
 import pokerkit
 
+from cardroom.apps import CardroomConfig
 from cardroom.utilities import get_divmod, get_parse_value, get_tzinfo
 import cardroom.controller as controller
 import cardroom.table as table
@@ -122,6 +124,17 @@ class Controller(models.Model):
 class CashGame(Controller):
     table = models.ForeignKey(Table, models.PROTECT)
 
+    def get_absolute_url(self, namespace: str = CardroomConfig.name) -> str:
+        try:
+            url = reverse(
+                f'{namespace}:cash_game_detail',
+                kwargs={'pk': self.pk},
+            )
+        except NoReverseMatch:
+            url = reverse('cash_game_detail', kwargs={'pk': self.pk})
+
+        return url
+
     def load(self) -> controller.CashGame:
         return controller.CashGame(
             self.name,
@@ -184,6 +197,17 @@ class HandHistory(models.Model):
                 pass
             else:
                 yield field.name
+
+    def get_absolute_url(self, namespace: str = CardroomConfig.name) -> str:
+        try:
+            url = reverse(
+                f'{namespace}:hand_history_detail',
+                kwargs={'pk': self.pk},
+            )
+        except NoReverseMatch:
+            url = reverse('hand_history_detail', kwargs={'pk': self.pk})
+
+        return url
 
     @classmethod
     def dump(cls, hh: pokerkit.HandHistory) -> HandHistory:
