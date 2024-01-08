@@ -1,0 +1,54 @@
+{% extends 'cardroom/includes/felt.html' %}
+
+{% block title %}Hand #{{ object.id }}{% endblock %}
+
+{% block main %}
+<canvas id="felt" width="1024" height="768"></canvas>
+<button id="previous" py-click="decrement_index">Previous</button>
+<button id="next" py-click="increment_index">Next</button>
+{% endblock %}
+
+{% block scripts %}
+{{ raw_settings|json_script:"raw-settings" }}
+{{ raw_data|json_script:"raw-data" }}
+<py-script>
+from json import loads
+
+from js import document
+from pyodide.ffi import JsProxy
+
+from cardroom.felt import Felt
+
+raw_settings = document.getElementById('raw-settings').innerHTML
+settings = loads(raw_settings)
+raw_data = document.getElementById('raw-data').innerHTML
+data = loads(raw_data)
+index = 0
+
+
+def decrement_index(event):
+    global index
+
+    index = max(0, index - 1)
+
+
+def increment_index(event):
+    global index
+
+    index = min(index + 1, len(data) - 1)
+
+
+def get_data():
+    return data[index]
+
+
+def main():
+    felt = Felt(settings, 'felt')
+
+    felt.animate(get_data)
+
+
+if __name__ == '__main__':
+    main()
+</py-script>
+{% endblock %}

@@ -20,4 +20,4 @@ urlpatterns: list[URLPattern | URLResolver] = [
 ]
 
 if get_admin_urls():
-    urlpatterns.append(path('admin/', admin.site.urls))
+    urlpatterns.append(path('', admin.site.urls))
