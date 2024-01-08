@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='cardroom',
-    version='0.0.1.dev1',
+    version='0.0.1.dev2',
     description='A Django application for poker tournament and table management',
     long_description=open('README.rst').read(),
     long_description_content_type='text/x-rst',
@@ -56,5 +56,5 @@ setup(
         'pokerkit~=0.4.6',
     ],
     python_requires='>=3.11',
-    package_data={'cardroom': ['py.typed']},
+    package_data={'cardroom': ['py.typed', 'static/**/*', 'templates/**/*']},
 )
