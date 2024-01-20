@@ -129,7 +129,7 @@ class Felt {
 		if (data["board_count"] > 0) {
 			const boardCardWidth = (settings["board_width"] - 2 * settings["board_radius"] - (data["board_count"] - 1) * settings["board_card_margin"]) / data["board_count"];
 			let boardCardX = -settings["board_width"] / 2 + settings["board_radius"] + boardCardWidth / 2;
-			const boardCardY = settings["board_height"] / 2 + settings["board_card_height"] / 2;
+			const boardCardY = settings["board_height"] / 2 + settings["board_card_height"] / 2 + settings["board_card_margin"];
 
 			for (const card of data["board"]) {
 				push();
@@ -247,11 +247,11 @@ class Felt {
 			const holeCardWidth = (settings["hole_width"] - 2 * settings["hole_radius"] - (cardCount - 1) * settings["hole_card_margin"]) / cardCount;
 			const initialHoleCardX = -settings["hole_width"] / 2 + settings["hole_radius"] + holeCardWidth / 2;
 			let holeCardX = initialHoleCardX;
-			let holeCardY = settings["hole_height"] / 2 + settings["hole_card_height"] / 2;
+			let holeCardY = settings["hole_height"] / 2 + settings["hole_card_height"] / 2 + settings["hole_card_margin"];
 
-			for (const status of [false, true]) {
+			for (const status_ of [false, true]) {
 				for (let i = 0; i < data["holes"][index].length; ++i) {
-					if (data["hole_statuses"][i] !== status)
+					if (data["hole_statuses"][i] !== status_)
 						continue;
 
 					const card = data["holes"][index][i];

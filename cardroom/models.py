@@ -146,7 +146,7 @@ class CashGame(Controller):
             self.standing_pat_timeout,
             self.betting_timeout,
             self.hole_cards_showing_or_mucking_timeout,
-            lambda _: None,  # TODO
+            lambda _: None,  # TODO: get proper broadcaster
             get_parse_value(),
             get_tzinfo(),
             self.table.load(),
@@ -224,7 +224,7 @@ class HandHistory(models.Model):
         for name in type(self).get_field_names():
             kwargs[name] = getattr(self, name)
 
-        return pokerkit.HandHistory(**kwargs)
+        return pokerkit.HandHistory(**kwargs, automations=())
 
     class Meta:
         verbose_name_plural = 'hand histories'

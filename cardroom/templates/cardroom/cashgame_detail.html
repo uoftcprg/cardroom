@@ -1,0 +1,25 @@
+{% extends 'cardroom/includes/felt.html' %}
+
+{% load static %}
+
+{% block title %}Cash Game #{{ object.id }}{% endblock %}
+
+{% block main %}
+<canvas id="felt"></canvas>
+<button id="stand-pat-or-discard" onclick="standPatOrDiscard()">Stand Pat/Discard</button>
+<input id="discarded-cards" />
+<button id="fold" onclick="fold()">Fold</button>
+<button id="check-or-call" onclick="checkOrCall()">Check/Call</button>
+<button id="post-bring-in" onclick="postBringIn()">Post Bring-In</button>
+<button id="complete-bet-or-raise-to" onclick="completeBetOrRaise()">Complete/Bet/Raise To</button>
+<input id="amount" />
+<button id="show-hole-cards" onclick="showHoleCards()">Show Hole Cards</button>
+<button id="muck-hole-cards" onclick="muckHoleCards()">Muck Hole Cards</button>
+{% endblock %}
+
+{% block scripts %}
+{{ object.pk|json_script:"pk" }}
+{{ settings|json_script:"settings" }}
+{{ data|json_script:"data" }}
+<script src="{% static 'cardroom/cashgame_detail.js' %}"></script>
+{% endblock %}

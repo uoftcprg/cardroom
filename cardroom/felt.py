@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from collections import deque
-from dataclasses import dataclass, KW_ONLY
+from dataclasses import dataclass, field, KW_ONLY
 from datetime import datetime
 from math import pi
 from typing import ClassVar, overload, TypeVar
@@ -55,7 +55,7 @@ class Settings:
     board_card_color: str = 'white'
     board_card_text_style: str = 'bold'
     board_card_text_font: str = 'sans'
-    board_card_text_size: str = 0.03
+    board_card_text_size: str = 0.025
 
     bet_ring_width: float = 0.425
     bet_ring_height: float = 0.175
@@ -130,18 +130,18 @@ class Settings:
 @dataclass
 class Data:
     _: KW_ONLY
-    names: list[str | None]
-    button: int | None
-    bets: list[int | None]
-    stacks: list[int | None]
-    pots: list[int]
-    holes: list[list[Card] | None]
-    hole_statuses: list[bool]
-    board: list[Card]
-    board_count: int
-    previous_action: tuple[int, str] | None
-    actor: int | None
-    timestamps: list[datetime] | None
+    names: list[str | None] = field(default_factory=list)
+    button: int | None = None
+    bets: list[int | None] = field(default_factory=list)
+    stacks: list[int | None] = field(default_factory=list)
+    pots: list[int] = field(default_factory=list)
+    holes: list[list[Card] | None] = field(default_factory=list)
+    hole_statuses: list[bool] = field(default_factory=list)
+    board: list[Card] = field(default_factory=list)
+    board_count: int = 0
+    previous_action: tuple[int, str] | None = None
+    actor: int | None = None
+    timestamps: list[datetime] | None = None
 
     @classmethod
     def from_hand_history(cls, hand_history: HandHistory) -> Iterator[Data]:
@@ -194,7 +194,7 @@ class Data:
 
         while state is None or state.status:
             if state is None:
-                state = hand_history.create_state(())
+                state = hand_history.create_state()
                 status = False
             else:
                 status = True
