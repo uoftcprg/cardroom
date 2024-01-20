@@ -16,8 +16,8 @@ class HandHistoryDetailView(DetailView):  # type: ignore[type-arg]
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        context['raw_settings'] = asdict(Settings())
-        context['raw_data'] = tuple(
+        context['settings'] = asdict(Settings())
+        context['data'] = tuple(
             map(asdict, Data.from_hand_history(self.object.load())),
         )
 

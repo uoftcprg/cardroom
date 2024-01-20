@@ -5,7 +5,7 @@ from collections import deque
 from dataclasses import dataclass, KW_ONLY
 from datetime import datetime
 from math import pi
-from typing import overload, TypeVar
+from typing import ClassVar, overload, TypeVar
 
 from pokerkit import Card, HandHistory, parse_action, State
 
@@ -15,95 +15,116 @@ _T = TypeVar('_T')
 @dataclass
 class Settings:
     _: KW_ONLY
-    background_color: str = 'Gray'
 
-    inner_table_color: str = 'SeaGreen'
-    inner_table_width: float = 0.55
-    inner_table_height: float = 0.3
+    background_color: str = 'gray'
 
-    outer_table_color: str = 'SaddleBrown'
-    outer_table_width: float = 0.6
-    outer_table_height: float = 0.35
+    table_border_color: str = 'saddlebrown'
+    table_felt_color: str = 'seagreen'
+    table_x: float = 0
+    table_y: float = 0
+    table_outer_width: float = 0.6
+    table_outer_height: float = 0.35
+    table_inner_width: float = 0.55
+    table_inner_height: float = 0.3
 
+    button_color: str = 'white'
+    button_angle: float = pi / 24
     button_ring_width: float = 0.5
     button_ring_height: float = 0.25
-    button_angle: float = pi / 24
-    button_color: str = 'White'
     button_diameter: float = 0.035
-    button_text_color: str = 'Black'
-    button_text_font: str = 'bold {}px sans-serif'
-    button_text_height: float = 0.025
+    button_text_color: str = 'black'
+    button_text_style: str = 'bold'
+    button_text_font: str = 'sans'
+    button_text_size: float = 0.025
     button_text: str = 'B'
+
+    board_x: float = 0
+    board_y: float = -0.05
+    board_width: float = 0.3
+    board_height: float = 0.025
+    board_radius: float = 0.0125
+    board_color: str = 'black'
+    board_pot_text: str = 'Pot: '
+    board_pot_text_color: str = 'white'
+    board_pot_text_style: str = 'bold'
+    board_pot_text_font: str = 'sans'
+    board_pot_text_size: float = 0.02
+    board_card_margin: float = 0.0025
+    board_card_height: float = 0.06
+    board_card_radius: float = 0.005
+    board_card_color: str = 'white'
+    board_card_text_style: str = 'bold'
+    board_card_text_font: str = 'sans'
+    board_card_text_size: str = 0.03
 
     bet_ring_width: float = 0.425
     bet_ring_height: float = 0.175
     bet_angle: float = 0
-    bet_box_color: str = 'Black'
+    bet_box_color: str = 'black'
+    bet_box_x_padding: float = 0.025
     bet_box_height: float = 0.025
-    bet_text: str = '{}'
-    bet_text_color: str = 'White'
-    bet_text_font: str = 'bold {}px sans-serif'
-    bet_text_height: float = 0.02
-
-    board_y: float = 0.05
-    board_width: float = 0.3
-    board_height: float = 0.025
-    board_radius: float = 0.003
-    board_color: str = 'Black'
-    board_text: str = 'Pot: {}'
-    board_text_color: str = 'White'
-    board_text_font: str = 'bold {}px sans-serif'
-    board_text_height: float = 0.02
-
-    board_card_margin: float = 0.0025
-    board_card_padding_percentage: float = 0.1
-    board_card_radius: float = 0.005
-    board_card_color: str = 'White'
-    board_card_text_font: str = 'bold {}px sans-serif'
-
-    club_color: str = 'Green'
-    diamond_color: str = 'Blue'
-    heart_color: str = 'Red'
-    spade_color: str = 'Black'
-    unknown_color: str = 'White'
+    bet_box_radius: float = 0.0125
+    bet_text_style: str = 'bold'
+    bet_text_color: str = 'white'
+    bet_text_font: str = 'sans'
+    bet_text_size: float = 0.02
 
     seat_ring_width: float = 0.8
     seat_ring_height: float = 0.55
+    seat_angle: float = 0
 
-    name_y: float = 0
-    name_width: float = 0.25
-    name_height: float = 0.025
-    name_radius: float = 0.003
-    name_color: str = 'Black'
-    name_text: str = '{}'
-    name_text_color: str = 'White'
-    name_text_font: str = 'bold {}px sans-serif'
-    name_text_height: float = 0.02
-
-    stack_y: float = 0.025
-    stack_width: float = 0.25
-    stack_height: float = 0.025
-    stack_color: str = 'DarkBlue'
-    stack_text: str = 'Stack: {}'
-    stack_text_color: str = 'White'
-    stack_text_font: str = 'bold {}px sans-serif'
-    stack_text_height: float = 0.02
-
-    acted_y: float = 0.05
-    acted_width: float = 0.25
-    acted_height: float = 0.025
-    acted_radius: float = 0.003
-    acted_color: str = 'DarkGray'
-    acted_text: str = '{}'
-    acted_text_color: str = 'Black'
-    acted_text_font: str = 'bold {}px sans-serif'
-    acted_text_height: float = 0.02
-
+    hole_x: float = 0
+    hole_y: float = 0
+    hole_width: float = 0.225
+    hole_height: float = 0.03
+    hole_radius: float = 0.005
+    hole_color: float = 'black'
     hole_card_margin: float = 0.003
-    hole_card_padding_percentage: float = 0.1
-    hole_card_radius: float = 0.005
-    hole_card_color: str = 'White'
-    hole_card_text_font: str = 'bold {}px sans-serif'
+    hole_card_height: float = 0.05
+    hole_card_radius: float = 0.004
+    hole_card_color: str = 'white'
+    hole_card_text_style: str = 'bold'
+    hole_card_text_font: str = 'sans'
+    hole_card_text_size: str = 0.025
+
+    name_x: float = 0
+    name_y: float = 0
+    name_box_width: float = 0.225
+    name_box_height: float = 0.03
+    name_box_radius: float = 0
+    name_box_color: str = 'darkblue'
+    name_text_style: str = 'bold'
+    name_text_color: str = 'white'
+    name_text_font: str = 'sans'
+    name_text_size: float = 0.02
+
+    stack_x: float = 0
+    stack_y: float = -0.03
+    stack_box_width: float = 0.225
+    stack_box_height: float = 0.03
+    stack_box_radius: float = 0
+    stack_box_color: str = 'black'
+    stack_text_style: str = 'bold'
+    stack_text_color: str = 'white'
+    stack_text_font: str = 'sans'
+    stack_text_size: float = 0.02
+
+    previous_action_x: float = 0
+    previous_action_y: float = -0.06
+    previous_action_box_width: float = 0.225
+    previous_action_box_height: float = 0.03
+    previous_action_box_radius: float = 0
+    previous_action_box_color: str = 'darkgray'
+    previous_action_text_style: str = 'bold'
+    previous_action_text_color: str = 'black'
+    previous_action_text_font: str = 'sans'
+    previous_action_text_size: float = 0.02
+
+    club_color: str = 'green'
+    diamond_color: str = 'blue'
+    heart_color: str = 'red'
+    spade_color: str = 'black'
+    unknown_color: str = 'white'
 
 
 @dataclass
@@ -114,11 +135,11 @@ class Data:
     bets: list[int | None]
     stacks: list[int | None]
     pots: list[int]
-    hole: list[list[Card] | None]
+    holes: list[list[Card] | None]
     hole_statuses: list[bool]
     board: list[Card]
     board_count: int
-    acted: tuple[int, str] | None
+    previous_action: tuple[int, str] | None
     actor: int | None
     timestamps: list[datetime] | None
 
@@ -178,7 +199,7 @@ class Data:
             else:
                 status = True
 
-            acted = None
+            previous_action = None
             action = None
 
             while status:
@@ -217,7 +238,12 @@ class Data:
             if not pots:
                 pots.append(0)
 
-            hole = p2s(map(list.copy, state.hole_cards))
+            holes = p2s(map(list.copy, state.hole_cards))
+
+            for i, hole in enumerate(holes):
+                if not hole:
+                    holes[i] = None
+
             hole_statuses = list[bool]()
 
             for street in game.streets:
@@ -232,7 +258,7 @@ class Data:
                     and operation is not None
                     and hasattr(operation, 'player_index')
             ):
-                acted = p2s(operation.player_index), action
+                previous_action = p2s(operation.player_index), action
 
             if state.stander_pat_or_discarder_index is not None:
                 actor = p2s(state.stander_pat_or_discarder_index)
@@ -249,11 +275,11 @@ class Data:
                 bets=bets,
                 stacks=stacks,
                 pots=pots,
-                hole=hole,
+                holes=holes,
                 hole_statuses=hole_statuses,
                 board=board,
                 board_count=board_count,
-                acted=acted,
+                previous_action=previous_action,
                 actor=actor,
                 timestamps=None,
             )
