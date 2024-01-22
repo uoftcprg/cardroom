@@ -181,6 +181,7 @@ class CashGame(Controller):
 
 
 class HandHistory(models.Model):
+    automations: ClassVar[tuple[Automation]] = (Automation.CARD_BURNING,)
     variant = models.CharField(max_length=255, choices=Variant.choices)
     ante_trimming_status = models.BooleanField(default=False)
     antes = models.JSONField()
@@ -255,7 +256,7 @@ class HandHistory(models.Model):
         for name in type(self).get_field_names():
             kwargs[name] = getattr(self, name)
 
-        return pokerkit.HandHistory(**kwargs, automations=())
+        return pokerkit.HandHistory(**kwargs, automations=self.automations)
 
     class Meta:
         verbose_name_plural = 'hand histories'

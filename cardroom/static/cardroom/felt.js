@@ -312,7 +312,7 @@ class Felt {
 			pop();
 		}
 
-		if (data["stacks"][index] !== null && data["stacks"][index] !== 0) {
+		if (data["stacks"][index] !== null) {
 			push();
 
 			translate(settings["stack_x"], settings["stack_y"]);

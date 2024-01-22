@@ -6,6 +6,6 @@ djangorestframework~=3.14.0
 django-stubs[compatible-mypy]~=4.2.7
 flake8~=6.1.0
 mypy~=1.7.1
-pokerkit~=0.4.6
+pokerkit~=0.4.8
 Sphinx~=7.2.6
 twine~=4.0.2

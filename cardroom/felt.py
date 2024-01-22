@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
-from collections import deque
 from dataclasses import dataclass, field, KW_ONLY
 from math import pi
 from typing import overload, TypeVar
 
-from pokerkit import Card, HandHistory, parse_action, State
+from pokerkit import Card, HandHistory
 
 from cardroom.table import Table
 
@@ -251,43 +250,7 @@ class Data:
         else:
             button = None
 
-        state: State | None = None
-        actions = deque(hand_history.actions)
-
-        while state is None or state.status:
-            if state is None:
-                state = hand_history.create_state()
-                status = False
-            else:
-                status = True
-
-            previous_action = None
-            action = None
-
-            while status:
-                status = False
-
-                if state.can_post_ante():
-                    state.post_ante()
-                elif state.can_post_blind_or_straddle():
-                    state.post_blind_or_straddle()
-                elif state.can_collect_bets():
-                    state.collect_bets()
-                elif state.can_burn_card():
-                    state.burn_card('??')
-
-                    status = True
-                elif state.can_kill_hand():
-                    state.kill_hand()
-                elif state.can_push_chips():
-                    state.push_chips()
-                elif state.can_pull_chips():
-                    state.pull_chips()
-                else:
-                    action = actions.popleft()
-
-                    parse_action(state, action)
-
+        for state, action in hand_history.iter_state_actions():
             bets = p2s(state.bets)
 
             if state.status or hand_history.finishing_stacks is None:
@@ -321,6 +284,8 @@ class Data:
                     and hasattr(operation, 'player_index')
             ):
                 previous_action = p2s(operation.player_index), action
+            else:
+                previous_action = None
 
             if state.stander_pat_or_discarder_index is not None:
                 actor = p2s(state.stander_pat_or_discarder_index)
