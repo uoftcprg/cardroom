@@ -11,6 +11,8 @@ import pokerkit
 DEFAULT_DIVMOD: str = 'cardroom.utilities.divmod'
 DEFAULT_PARSE_VALUE: str = 'cardroom.utilities.parse_value'
 DEFAULT_DECIMAL_PLACES: int | float = inf
+DEFAULT_VIEWS: bool = False
+DEFAULT_ADMIN_URLS: bool = False
 _divmod = divmod
 
 
@@ -51,6 +53,10 @@ def parse_value(raw_value: str) -> int:
     return value
 
 
+def get_tzinfo() -> ZoneInfo:
+    return ZoneInfo(getattr(settings, 'TIME_ZONE', 'UTC'))
+
+
 def get_divmod() -> Callable[[int, int], tuple[int, int]]:
     return cast(
         Callable[[int, int], tuple[int, int]],
@@ -71,9 +77,9 @@ def get_decimal_places() -> int | float:
     return getattr(settings, 'CARDROOM_DECIMAL_PLACES', DEFAULT_DECIMAL_PLACES)
 
 
+def get_views() -> bool:
+    return getattr(settings, 'CARDROOM_VIEWS', DEFAULT_VIEWS)
+
+
 def get_admin_urls() -> bool:
-    return getattr(settings, 'CARDROOM_ADMIN_URLS', False)
-
-
-def get_tzinfo() -> ZoneInfo:
-    return ZoneInfo(getattr(settings, 'TIME_ZONE', 'UTC'))
+    return getattr(settings, 'CARDROOM_ADMIN_URLS', DEFAULT_ADMIN_URLS)

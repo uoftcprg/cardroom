@@ -7,14 +7,19 @@ from typing import ClassVar
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.utils.translation import gettext_lazy as _
 from django.urls import NoReverseMatch, reverse
+from django.utils.translation import gettext_lazy as _
 from pokerkit import Automation, ValuesLike
 import pokerkit
 
 from cardroom.apps import CardroomConfig
 from cardroom.gamemaster import broadcast
-from cardroom.utilities import get_divmod, get_parse_value, get_tzinfo
+from cardroom.utilities import (
+    get_divmod,
+    get_parse_value,
+    get_tzinfo,
+    get_views,
+)
 import cardroom.controller as controller
 import cardroom.table as table
 
@@ -142,16 +147,20 @@ class Controller(models.Model):
 class CashGame(Controller):
     table = models.ForeignKey(Table, models.PROTECT)
 
-    def get_absolute_url(self, namespace: str = CardroomConfig.name) -> str:
-        try:
-            url = reverse(
-                f'{namespace}:cash_game_detail',
-                kwargs={'pk': self.pk},
-            )
-        except NoReverseMatch:
-            url = reverse('cash_game_detail', kwargs={'pk': self.pk})
+    if get_views():
+        def get_absolute_url(
+                self,
+                namespace: str = CardroomConfig.name,
+        ) -> str:
+            try:
+                url = reverse(
+                    f'{namespace}:cash_game_detail',
+                    kwargs={'pk': self.pk},
+                )
+            except NoReverseMatch:
+                url = reverse('cash_game_detail', kwargs={'pk': self.pk})
 
-        return url
+            return url
 
     def load(self) -> controller.CashGame:
         return controller.CashGame(
@@ -216,16 +225,20 @@ class HandHistory(models.Model):
             else:
                 yield field.name
 
-    def get_absolute_url(self, namespace: str = CardroomConfig.name) -> str:
-        try:
-            url = reverse(
-                f'{namespace}:hand_history_detail',
-                kwargs={'pk': self.pk},
-            )
-        except NoReverseMatch:
-            url = reverse('hand_history_detail', kwargs={'pk': self.pk})
+    if get_views():
+        def get_absolute_url(
+                self,
+                namespace: str = CardroomConfig.name,
+        ) -> str:
+            try:
+                url = reverse(
+                    f'{namespace}:hand_history_detail',
+                    kwargs={'pk': self.pk},
+                )
+            except NoReverseMatch:
+                url = reverse('hand_history_detail', kwargs={'pk': self.pk})
 
-        return url
+            return url
 
     @classmethod
     def dump(cls, hh: pokerkit.HandHistory) -> HandHistory:

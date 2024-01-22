@@ -150,6 +150,10 @@ CARDROOM_DECIMAL_PLACES = 0
 #
 # CARDROOM_DECIMAL_PLACES = 2
 
+# Enable views
+
+CARDROOM_VIEWS = True
+
 # Enable admin urls
 
 CARDROOM_ADMIN_URLS = True

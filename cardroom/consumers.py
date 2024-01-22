@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
+from dataclasses import asdict
 
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import JsonWebsocketConsumer
 
 from cardroom.models import CashGame
-from cardroom.gamemaster import handle
+from cardroom.gamemaster import handle, get_data
 
 
 class ControllerConsumer(JsonWebsocketConsumer, ABC):
@@ -27,6 +28,7 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
             self.controller.group_name,
             self.channel_name,
         )
+        self.update({'data': (asdict(get_data(self.controller)),)})
 
     def disconnect(self, code):
         async_to_sync(self.channel_layer.group_discard)(

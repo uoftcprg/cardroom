@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from queue import Empty, Queue
 from traceback import print_exc
-from typing import Any, cast, Self
+from typing import Any, cast
 from warnings import warn
 from zoneinfo import ZoneInfo
 
@@ -115,9 +115,9 @@ class Controller(ABC):
         state_construction_timestamp = None
         state_destruction_timestamp = None
         idle_timestamps = dict[str, datetime | None]()
-        standing_pat_timestamp = None
-        betting_timestamp = None
-        hole_cards_showing_or_mucking_timestamp = None
+        standing_pat_timestamp: datetime | None = None
+        betting_timestamp: datetime | None = None
+        hole_cards_showing_or_mucking_timestamp: datetime | None = None
 
         def parse_user_action() -> None:
             nonlocal standing_pat_timestamp
