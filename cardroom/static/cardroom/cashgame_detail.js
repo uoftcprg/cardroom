@@ -1,7 +1,31 @@
-function standPatOrDiscard() {
-	cashGameSocket.send(JSON.stringify(`sd ${discardedCards.value}`));
+function join_() {
+	cashGameSocket.send(JSON.stringify(`j ${jSeatIndex.value}`));
 
-	discardedCards.value = "";
+	jSeatIndex.value = "";
+}
+
+function leave() {
+	cashGameSocket.send(JSON.stringify("l"));
+}
+
+function sitOut() {
+	cashGameSocket.send(JSON.stringify("s"));
+}
+
+function beBack() {
+	cashGameSocket.send(JSON.stringify("b"));
+}
+
+function buyRebuyTopOffOrRateHole() {
+	cashGameSocket.send(JSON.stringify(`brtr ${brtrAmount.value}`));
+
+	brtrAmount.value = "";
+}
+
+function standPatOrDiscard() {
+	cashGameSocket.send(JSON.stringify(`sd ${sdCards.value}`));
+
+	sdCards.value = "";
 }
 
 function fold() {
@@ -13,32 +37,46 @@ function checkOrCall() {
 }
 
 function postBringIn() {
-	cashGameSocket.send(JSON.stringify("pbi"));
+	cashGameSocket.send(JSON.stringify("pb"));
 }
 
 function completeBetOrRaise() {
-	cashGameSocket.send(JSON.stringify(`cbr ${amount.value}`));
+	cashGameSocket.send(JSON.stringify(`cbr ${cbrAmount.value}`));
 
-	amount.value = "";
+	cbrAmount.value = "";
 }
 
 function showHoleCards() {
-	cashGameSocket.send(JSON.stringify(`sm ${holeCards.join("")}`));
+	cashGameSocket.send(JSON.stringify(`sm ${smCards.value}`));
+
+	smCards.value = "";
 }
 
-function muckHoleCards() {
-	cashGameSocket.send(JSON.stringify("sm"));
+function getData() {
+	dataGuard = false;
+
+	return data[0];
+}
+
+function shifter() {
+	if (!dataGuard && data.length > 1)
+		data.shift();
+}
+
+function watchdog() {
 }
 
 const canvas = document.getElementById("felt");
-const discardedCards = document.getElementById("discarded-cards");
-const amount = document.getElementById("amount");
+const jSeatIndex = document.getElementById("j-seat-index");
+const brtrAmount = document.getElementById("brtr-amount");
+const sdCards = document.getElementById("sd-cards");
+const cbrAmount = document.getElementById("cbr-amount");
+const smCards = document.getElementById("sm-cards");
 const pk = JSON.parse(document.getElementById("pk").textContent);
 const settings = JSON.parse(document.getElementById("settings").textContent);
-const data = JSON.parse(document.getElementById("data").textContent);
-const dataGetter = () => data;
-const holeCards = [];
-const felt = new Felt(1024, 768, 1000, canvas, settings, dataGetter);
+let dataGuard = true;
+let data = JSON.parse(document.getElementById("data").textContent);
+const felt = new Felt(canvas.width, canvas.height, 1000, canvas, settings, getData);
 let protocol;
 
 if (location.protocol === "http:")
@@ -50,11 +88,11 @@ else
 
 const cashGameSocket = new WebSocket(`${protocol}//${location.host}/ws/cash-game/${pk}/`);
 cashGameSocket.onmessage = function(event) {
-	const data = JSON.parse(event.data);
-
-	// TODO: set data
-	console.log(data);
+	dataGuard = true;
+	data = JSON.parse(event.data).data;
 }
 cashGameSocket.onclose = function(event) {
 	console.error("Cash game socket closed unexpectedly");
 }
+
+setInterval(shifter, settings["shifter_timeout"] * 1000);

@@ -25,7 +25,14 @@ class PokerTestCase(PickleTestCaseMixin, TestCase):
                 raw_blinds_or_straddles=[1, 2],
                 min_bet=2,
             ).load(),
-            NoLimitTexasHoldem((), False, {1: 3}, [1, 2], 2, get_divmod()),
+            NoLimitTexasHoldem(
+                Poker.automations,
+                False,
+                {1: 3},
+                [1, 2],
+                2,
+                get_divmod(),
+            ),
         )
         self.assertPickleEqual(
             Poker.objects.create(
@@ -35,7 +42,14 @@ class PokerTestCase(PickleTestCaseMixin, TestCase):
                 raw_blinds_or_straddles=[1, 2],
                 min_bet=2,
             ).load(),
-            NoLimitTexasHoldem((), False, [0, 3], [1, 2], 2, get_divmod()),
+            NoLimitTexasHoldem(
+                Poker.automations,
+                False,
+                [0, 3],
+                [1, 2],
+                2,
+                get_divmod(),
+            ),
         )
         self.assertPickleEqual(
             Poker.objects.create(
@@ -46,7 +60,14 @@ class PokerTestCase(PickleTestCaseMixin, TestCase):
                 raw_blinds_or_straddles=[1, 2],
                 min_bet=2,
             ).load(),
-            NoLimitTexasHoldem((), True, 0, [1, 2], 2, get_divmod()),
+            NoLimitTexasHoldem(
+                Poker.automations,
+                True,
+                0,
+                [1, 2],
+                2,
+                get_divmod(),
+            ),
         )
         self.assertPickleEqual(
             Poker.objects.create(
@@ -57,7 +78,14 @@ class PokerTestCase(PickleTestCaseMixin, TestCase):
                 raw_blinds_or_straddles={-1: 2},
                 min_bet=2,
             ).load(),
-            NoLimitShortDeckHoldem((), True, 2, {-1: 2}, 2, get_divmod()),
+            NoLimitShortDeckHoldem(
+                Poker.automations,
+                True,
+                2,
+                {-1: 2},
+                2,
+                get_divmod(),
+            ),
         )
 
 
@@ -79,7 +107,14 @@ class TableTestCase(PickleTestCaseMixin, TestCase):
                 max_starting_stack=200,
             ).load(),
             table.Table(
-                NoLimitTexasHoldem((), False, {1: 3}, [1, 2], 2, get_divmod()),
+                NoLimitTexasHoldem(
+                    Poker.automations,
+                    False,
+                    {1: 3},
+                    [1, 2],
+                    2,
+                    get_divmod(),
+                ),
                 6,
                 80,
                 200,
@@ -161,7 +196,7 @@ class HandHistoryTestCase(TestCase):
             players = ["Bob", "Carol", "Ted", "Alice"]
             '''
         )
-        pkhh0 = pokerkit.HandHistory.loads(s)
+        pkhh0 = pokerkit.HandHistory.loads(s, automations=())
         hh0 = HandHistory.dump(pkhh0)
         hh0.save()
         hh1 = HandHistory.objects.first()

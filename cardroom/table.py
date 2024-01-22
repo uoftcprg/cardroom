@@ -202,7 +202,8 @@ class Table:
     # game changing
 
     def verify_game_changing(self, game: Poker) -> None:
-        pass
+        if self.state is not None:
+            raise ValueError('ongoing game')
 
     def can_change_game(self, game: Poker) -> bool:
         try:
@@ -292,7 +293,7 @@ class Table:
 
     # player management
 
-    def verify_sitting(self, user: str, seat_index: int) -> None:
+    def verify_joining(self, user: str, seat_index: int) -> None:
         for seat in self.seats:
             if seat.user == user:
                 raise ValueError('user already joined')
@@ -302,16 +303,16 @@ class Table:
         elif self.seats[seat_index].user_status:
             raise ValueError('seat occupied')
 
-    def can_sit(self, user: str, seat_index: int) -> bool:
+    def can_join(self, user: str, seat_index: int) -> bool:
         try:
-            self.verify_sitting(user, seat_index)
+            self.verify_joining(user, seat_index)
         except ValueError:
             return False
 
         return True
 
-    def sit(self, user: str, seat_index: int) -> None:
-        self.verify_sitting(user, seat_index)
+    def join(self, user: str, seat_index: int) -> None:
+        self.verify_joining(user, seat_index)
 
         seat = self.seats[seat_index]
         seat.user = user
@@ -387,7 +388,7 @@ class Table:
         seat = self.verify_being_back(user)
         seat.active_status = True
 
-    def verify_rebuying_topping_off_or_rat_holing(
+    def verify_buying_rebuying_topping_off_or_rat_holing(
             self,
             user: str,
             starting_stack: int,
@@ -408,13 +409,13 @@ class Table:
 
         return seat
 
-    def can_rebuy_top_off_or_rat_hole(
+    def can_buy_rebuy_top_off_or_rat_hole(
             self,
             user: str,
             starting_stack: int,
     ) -> bool:
         try:
-            self.verify_rebuying_topping_off_or_rat_holing(
+            self.verify_buying_rebuying_topping_off_or_rat_holing(
                 user,
                 starting_stack,
             )
@@ -423,12 +424,12 @@ class Table:
 
         return True
 
-    def rebuy_top_off_or_rat_hole(
+    def buy_rebuy_top_off_or_rat_hole(
             self,
             user: str,
             starting_stack: int,
     ) -> None:
-        seat = self.verify_rebuying_topping_off_or_rat_holing(
+        seat = self.verify_buying_rebuying_topping_off_or_rat_holing(
             user,
             starting_stack,
         )

@@ -32,7 +32,7 @@ class Felt {
 	}
 
 	get data() {
-		return dataGetter();
+		return this.dataGetter();
 	}
 
 	getPointOnEllipse(x, y, w, h, angle) {
@@ -194,7 +194,7 @@ class Felt {
 			pop();
 		}
 
-		if (data["bets"][index] !== 0) {
+		if (data["bets"][index] !== null && data["bets"][index] !== 0) {
 			let point = this.getPointOnEllipse(0, 0, settings["bet_ring_width"], settings["bet_ring_height"], angle + settings["bet_angle"]);
 
 			push();
@@ -288,49 +288,53 @@ class Felt {
 			pop();
 		}
 
-		push();
+		if (data["names"][index] !== null) {
+			push();
 
-		translate(settings["name_x"], settings["name_y"]);
+			translate(settings["name_x"], settings["name_y"]);
 
-		push();
-		fill(settings["name_box_color"]);
-		stroke(settings["name_box_color"]);
-		strokeWeight(0);
-		rect(0, 0, settings["name_box_width"], settings["name_box_height"], settings["name_box_radius"]);
-		pop();
+			push();
+			fill(settings["name_box_color"]);
+			stroke(settings["name_box_color"]);
+			strokeWeight(0);
+			rect(0, 0, settings["name_box_width"], settings["name_box_height"], settings["name_box_radius"]);
+			pop();
 
-		push();
-		fill(settings["name_text_color"]);
-		stroke(settings["name_text_color"]);
-		strokeWeight(0);
-		textStyle(settings["name_text_style"]);
-		textFont(settings["name_text_font"], settings["name_text_size"]);
-		this.text(data["names"][index], 0, 0);
-		pop();
+			push();
+			fill(settings["name_text_color"]);
+			stroke(settings["name_text_color"]);
+			strokeWeight(0);
+			textStyle(settings["name_text_style"]);
+			textFont(settings["name_text_font"], settings["name_text_size"]);
+			this.text(data["names"][index], 0, 0);
+			pop();
 
-		pop();
+			pop();
+		}
 
-		push();
+		if (data["stacks"][index] !== null && data["stacks"][index] !== 0) {
+			push();
 
-		translate(settings["stack_x"], settings["stack_y"]);
+			translate(settings["stack_x"], settings["stack_y"]);
 
-		push();
-		fill(settings["stack_box_color"]);
-		stroke(settings["stack_box_color"]);
-		strokeWeight(0);
-		rect(0, 0, settings["stack_box_width"], settings["stack_box_height"], settings["stack_box_radius"]);
-		pop();
+			push();
+			fill(settings["stack_box_color"]);
+			stroke(settings["stack_box_color"]);
+			strokeWeight(0);
+			rect(0, 0, settings["stack_box_width"], settings["stack_box_height"], settings["stack_box_radius"]);
+			pop();
 
-		push();
-		fill(settings["stack_text_color"]);
-		stroke(settings["stack_text_color"]);
-		strokeWeight(0);
-		textStyle(settings["stack_text_style"]);
-		textFont(settings["stack_text_font"], settings["stack_text_size"]);
-		this.text(data["stacks"][index], 0, 0);
-		pop();
+			push();
+			fill(settings["stack_text_color"]);
+			stroke(settings["stack_text_color"]);
+			strokeWeight(0);
+			textStyle(settings["stack_text_style"]);
+			textFont(settings["stack_text_font"], settings["stack_text_size"]);
+			this.text(data["stacks"][index], 0, 0);
+			pop();
 
-		pop();
+			pop();
+		}
 
 		if (data["previous_action"] !== null && data["previous_action"][0] === index) {
 			push();

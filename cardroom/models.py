@@ -2,15 +2,18 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import fields
+from functools import partial
+from typing import ClassVar
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.urls import NoReverseMatch, reverse
-from pokerkit import ValuesLike
+from pokerkit import Automation, ValuesLike
 import pokerkit
 
 from cardroom.apps import CardroomConfig
+from cardroom.gamemaster import broadcast
 from cardroom.utilities import get_divmod, get_parse_value, get_tzinfo
 import cardroom.controller as controller
 import cardroom.table as table
@@ -43,6 +46,17 @@ class Variant(models.TextChoices):
 
 
 class Poker(models.Model):
+    automations: ClassVar[tuple[Automation, ...]] = (
+        Automation.ANTE_POSTING,
+        Automation.BET_COLLECTION,
+        Automation.BLIND_OR_STRADDLE_POSTING,
+        Automation.CARD_BURNING,
+        Automation.BOARD_DEALING,
+        Automation.HOLE_DEALING,
+        Automation.HAND_KILLING,
+        Automation.CHIPS_PUSHING,
+        Automation.CHIPS_PULLING,
+    )
     name = models.CharField(max_length=255, unique=True)
     variant = models.CharField(max_length=255, choices=Variant.choices)
     ante_trimming_status = models.BooleanField(default=False)
@@ -67,7 +81,7 @@ class Poker(models.Model):
             return raw_values
 
         kwargs = {
-            'automations': (),
+            'automations': self.automations,
             'ante_trimming_status': self.ante_trimming_status,
             'raw_antes': clean(self.raw_antes),
             'raw_blinds_or_straddles': clean(self.raw_blinds_or_straddles),
@@ -114,6 +128,10 @@ class Controller(models.Model):
     betting_timeout = models.FloatField()
     hole_cards_showing_or_mucking_timeout = models.FloatField()
 
+    @property
+    def group_name(self) -> str:
+        return f'{type(self).__name__}-{self.pk}'
+
     def __str__(self) -> str:
         return self.name
 
@@ -146,7 +164,7 @@ class CashGame(Controller):
             self.standing_pat_timeout,
             self.betting_timeout,
             self.hole_cards_showing_or_mucking_timeout,
-            lambda _: None,  # TODO: get proper broadcaster
+            partial(broadcast, self),
             get_parse_value(),
             get_tzinfo(),
             self.table.load(),

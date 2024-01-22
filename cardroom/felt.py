@@ -3,11 +3,12 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from collections import deque
 from dataclasses import dataclass, field, KW_ONLY
-from datetime import datetime
 from math import pi
-from typing import ClassVar, overload, TypeVar
+from typing import overload, TypeVar
 
 from pokerkit import Card, HandHistory, parse_action, State
+
+from cardroom.table import Table
 
 _T = TypeVar('_T')
 
@@ -55,7 +56,7 @@ class Settings:
     board_card_color: str = 'white'
     board_card_text_style: str = 'bold'
     board_card_text_font: str = 'sans'
-    board_card_text_size: str = 0.025
+    board_card_text_size: float = 0.025
 
     bet_ring_width: float = 0.425
     bet_ring_height: float = 0.175
@@ -78,14 +79,14 @@ class Settings:
     hole_width: float = 0.225
     hole_height: float = 0.03
     hole_radius: float = 0.005
-    hole_color: float = 'black'
+    hole_color: str = 'black'
     hole_card_margin: float = 0.003
     hole_card_height: float = 0.05
     hole_card_radius: float = 0.004
     hole_card_color: str = 'white'
     hole_card_text_style: str = 'bold'
     hole_card_text_font: str = 'sans'
-    hole_card_text_size: str = 0.025
+    hole_card_text_size: float = 0.025
 
     name_x: float = 0
     name_y: float = 0
@@ -126,6 +127,9 @@ class Settings:
     spade_color: str = 'black'
     unknown_color: str = 'white'
 
+    shift_timeout: float = 0.25
+    watchdog_timeout: float = 1
+
 
 @dataclass
 class Data:
@@ -141,7 +145,65 @@ class Data:
     board_count: int = 0
     previous_action: tuple[int, str] | None = None
     actor: int | None = None
-    timestamps: list[datetime] | None = None
+
+    @classmethod
+    def from_table(cls, table: Table) -> Data:
+        button = None if table.button is None else table.button.seat_index
+        hole_statuses = list[bool]()
+
+        for street in table.game.streets:
+            hole_statuses.extend(street.hole_dealing_statuses)
+
+        if table.state is None:
+            pots = []
+            board = []
+        else:
+            pots = [pot.amount for pot in table.state.pots]
+            board = table.state.board_cards.copy()
+
+        board_count = table.game.max_board_card_count
+        previous_action = None
+        actor = None
+        names = []
+        bets = list[int | None]()
+        stacks = list[int | None]()
+        holes = list[list[Card] | None]()
+
+        for seat in table.seats:
+            names.append(seat.user)
+
+            if seat.player_index is None or table.state is None:
+                bets.append(None)
+                stacks.append(seat.starting_stack)
+                holes.append(None)
+            else:
+                bets.append(table.state.bets[seat.player_index])
+                stacks.append(table.state.stacks[seat.player_index])
+                holes.append(table.state.hole_cards[seat.player_index].copy())
+
+                if (
+                        (
+                            table.state.stander_pat_or_discarder_index
+                            == seat.player_index
+                        )
+                        or table.state.actor_index == seat.player_index
+                        or table.state.showdown_index == seat.player_index
+                ):
+                    actor = seat.index
+
+        return Data(
+            names=names,
+            button=button,
+            bets=bets,
+            stacks=stacks,
+            pots=pots,
+            holes=holes,
+            hole_statuses=hole_statuses,
+            board=board,
+            board_count=board_count,
+            previous_action=previous_action,
+            actor=actor,
+        )
 
     @classmethod
     def from_hand_history(cls, hand_history: HandHistory) -> Iterator[Data]:
@@ -281,5 +343,4 @@ class Data:
                 board_count=board_count,
                 previous_action=previous_action,
                 actor=actor,
-                timestamps=None,
             )

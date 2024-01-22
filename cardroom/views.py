@@ -5,6 +5,7 @@ from django.views.generic import DetailView
 
 from cardroom.models import CashGame, HandHistory
 from cardroom.felt import Settings, Data
+from cardroom.gamemaster import get_data
 
 
 class CashGameDetailView(DetailView):  # type: ignore[type-arg]
@@ -13,7 +14,8 @@ class CashGameDetailView(DetailView):  # type: ignore[type-arg]
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['settings'] = asdict(Settings())
-        context['data'] = asdict(Data())
+        data = get_data(self.object)  # type: ignore[no-untyped-call]
+        context['data'] = (asdict(data),)
 
         return context
 

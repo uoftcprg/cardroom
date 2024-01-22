@@ -5,12 +5,14 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from queue import Empty, Queue
+from traceback import print_exc
 from typing import Any, cast, Self
 from warnings import warn
 from zoneinfo import ZoneInfo
 
 from pokerkit import min_or_none, parse_action
 
+from cardroom.felt import Data
 from cardroom.table import Table
 
 
@@ -34,7 +36,7 @@ class Controller(ABC):
     """The betting timeout."""
     hole_cards_showing_or_mucking_timeout: float
     """The hole cards showing or mucking timeout."""
-    callback: Callable[[Self], Any]
+    callback: Callable[[list[Data]], Any]
     """The callback."""
     parse_value: Callable[[str], int]
     """The value parser."""
@@ -89,7 +91,7 @@ class Controller(ABC):
                         *idle_timestamps.values(),
                         standing_pat_timestamp,
                         betting_timestamp,
-                        hole_cards_showing_or_mucking_timeout,
+                        hole_cards_showing_or_mucking_timestamp,
                     ),
                 ),
             )
@@ -117,26 +119,81 @@ class Controller(ABC):
         betting_timestamp = None
         hole_cards_showing_or_mucking_timestamp = None
 
-        while user_action := get_event():
+        def parse_user_action() -> None:
+            nonlocal standing_pat_timestamp
+            nonlocal betting_timestamp
+            nonlocal hole_cards_showing_or_mucking_timestamp
+
+            tokens = action.split()
+
+            match tokens:
+                case 'j', seat_index:
+                    table.join(user, int(seat_index))
+                case ('l',):
+                    table.leave(user)
+                case ('s',):
+                    table.sit_out(user)
+                case ('b',):
+                    table.be_back(user)
+                case 'brtr', starting_stack:
+                    table.buy_rebuy_top_off_or_rat_hole(
+                        user,
+                        self.parse_value(starting_stack),
+                    )
+                case _:
+                    if table.can_be_back(user):
+                        table.be_back(user)
+
+                    player_index = table.get_seat(user).player_index
+
+                    if player_index is None:
+                        raise ValueError('player dne')
+
+                    player = f'p{player_index + 1}'
+
+                    if table.state is None:
+                        raise ValueError('state dne')
+
+                    parse_action(
+                        table.state,
+                        f'{player} {action}',
+                        self.parse_value,
+                    )
+
+                    standing_pat_timestamp = None
+                    betting_timestamp = None
+                    hole_cards_showing_or_mucking_timestamp = None
+
+        data = list[Data]()
+
+        while True:
+            user_action = get_event()
+
             if user_action is not None:
                 user, action = user_action
 
                 if isinstance(action, str):
-                    self._parse_user_action(table, user, action)
+                    try:
+                        parse_user_action()
+                    except ValueError:
+                        print_exc()
+                    else:
+                        data.append(Data.from_table(table))
                 else:
                     warn('cannot handle event')
 
-            status = True
+            data_count = None
 
-            while status:
-                status = False
+            while data_count != len(data):
+                data_count = len(data)
                 state_construction_timeout = None
 
                 if table.can_construct_state():
                     if is_past_timestamp(state_construction_timestamp):
-                        table.construct_state()
+                        state_construction_timestamp = None
 
-                        status = True
+                        table.construct_state()
+                        data.append(Data.from_table(table))
                     else:
                         state_construction_timeout = (
                             self.state_construction_timeout
@@ -152,11 +209,11 @@ class Controller(ABC):
 
                 if table.can_destroy_state():
                     if is_past_timestamp(state_destruction_timestamp):
+                        state_destruction_timestamp = None
+
                         table.destroy_state()
-
+                        data.append(Data.from_table(table))
                         # TODO: increase time banks
-
-                        status = True
                     else:
                         state_destruction_timeout = (
                             self.state_destruction_timeout
@@ -178,8 +235,7 @@ class Controller(ABC):
                             and table.can_sit_out(user)
                     ):
                         table.sit_out(user)
-
-                        status = True
+                        data.append(Data.from_table(table))
 
                     idle_timeout = None
 
@@ -188,52 +244,24 @@ class Controller(ABC):
                         and table.can_leave(user)
                     ):
                         if is_past_timestamp(idle_timestamps.get(user)):
-                            table.leave(user)
+                            idle_timestamps[user] = None
 
-                            status = True
+                            table.leave(user)
+                            data.append(Data.from_table(table))
                         else:
                             idle_timeout = self.idle_timeout
 
                     idle_timestamps[user] = get_future_timestamp(idle_timeout)
 
                 if table.state is not None:
-                    if table.state.can_post_ante():
-                        table.state.post_ante()
-
-                        status = True
-
-                    if table.state.can_collect_bets():
-                        table.state.collect_bets()
-
-                        status = True
-
-                    if table.state.can_post_blind_or_straddle():
-                        table.state.post_blind_or_straddle()
-
-                        status = True
-
-                    if table.state.can_burn_card():
-                        table.state.burn_card()
-
-                        status = True
-
-                    if table.state.can_deal_board():
-                        table.state.deal_board()
-
-                        status = True
-
-                    if table.state.can_deal_hole():
-                        table.state.deal_hole()
-
-                        status = True
-
                     standing_pat_timeout = None
 
                     if table.state.can_stand_pat_or_discard():
                         if is_past_timestamp(standing_pat_timestamp):
-                            table.state.stand_pat_or_discard()
+                            standing_pat_timestamp = None
 
-                            status = True
+                            table.state.stand_pat_or_discard()
+                            data.append(Data.from_table(table))
                         else:
                             standing_pat_timeout = self.standing_pat_timeout
 
@@ -249,18 +277,17 @@ class Controller(ABC):
                         # TODO: use time banks
 
                         if is_past_timestamp(betting_timestamp):
+                            betting_timestamp = None
+
                             if table.state.can_fold():
                                 table.state.fold()
-
-                                status = True
+                                data.append(Data.from_table(table))
                             elif table.state.can_check_or_call():
                                 table.state.check_or_call()
-
-                                status = True
+                                data.append(Data.from_table(table))
                             elif table.state.can_post_bring_in():
                                 table.state.post_bring_in()
-
-                                status = True
+                                data.append(Data.from_table(table))
                             else:
                                 raise AssertionError
                         else:
@@ -280,9 +307,10 @@ class Controller(ABC):
                                     hole_cards_showing_or_mucking_timestamp,
                                 )
                         ):
-                            table.state.show_or_muck_hole_cards()
+                            hole_cards_showing_or_mucking_timestamp = None
 
-                            status = True
+                            table.state.show_or_muck_hole_cards()
+                            data.append(Data.from_table(table))
                         else:
                             hole_cards_showing_or_mucking_timeout = (
                                 self.hole_cards_showing_or_mucking_timeout
@@ -297,21 +325,6 @@ class Controller(ABC):
                         ),
                     )
 
-                    if table.state.can_kill_hand():
-                        table.state.kill_hand()
-
-                        status = True
-
-                    if table.state.can_push_chips():
-                        table.state.push_chips()
-
-                        status = True
-
-                    if table.state.can_pull_chips():
-                        table.state.pull_chips()
-
-                        status = True
-
             for user in set(idle_timestamps) - set(table.users):
                 idle_timestamps.pop(user)
 
@@ -321,44 +334,8 @@ class Controller(ABC):
             self.timestamp = get_now_timestamp()
             self.auto_timestamp = get_auto_timestamp()
 
-            self.callback(self)
-
-    def _parse_user_action(self, table: Table, user: str, action: str) -> None:
-        tokens = action.split()
-
-        if table.can_be_back(user):
-            table.be_back(user)
-
-        match tokens:
-            case 's', seat_index:
-                table.sit(user, int(seat_index))
-            case ('l',):
-                table.leave(user)
-            case ('so',):
-                table.sit_out(user)
-            case ('bb',):
-                table.be_back(user)
-            case 'rtr', starting_stack:
-                table.rebuy_top_off_or_rat_hole(
-                    user,
-                    self.parse_value(starting_stack),
-                )
-            case _:
-                player_index = table.get_seat(user).player_index
-
-                if player_index is None:
-                    raise ValueError('player dne')
-
-                player = f'p{player_index + 1}'
-
-                if table.state is None:
-                    raise ValueError('state dne')
-
-                parse_action(
-                    table.state,
-                    f'{player} {action}',
-                    self.parse_value,
-                )
+            self.callback(data)
+            data.clear()
 
 
 @dataclass
@@ -382,4 +359,3 @@ class Tournament(Controller):
 
     def handle(self, user: str, event: Any) -> None:
         raise NotImplementedError
-# TODO: save and run controllers in memory
