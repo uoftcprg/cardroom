@@ -85,11 +85,13 @@ class Controller(ABC):
         def get_event() -> tuple[str, Any] | None:
             if (auto_timestamp := get_auto_timestamp()) is not None:
                 timeout = max(
-                    (auto_timestamp - get_now_timestamp()).seconds,
+                    (auto_timestamp - get_now_timestamp()).total_seconds(),
                     0,
                 )
             else:
                 timeout = None
+
+            print('Auto in...', timeout)
 
             try:
                 event = queue.get(timeout=timeout)
@@ -317,8 +319,9 @@ class Controller(ABC):
             # timestamp = get_now_timestamp()
             # auto_timestamp = get_auto_timestamp()
 
-            self.callback(data)
-            data.clear()
+            if data:
+                self.callback(data)
+                data.clear()
 
 
 @dataclass
