@@ -20,9 +20,8 @@ Installation
 Usage
 -----
 
-Below shows a sample usage of Cardroom.
-
-Add ``cardroom`` to the installed apps.
+Cardroom can run as a standalone server or can be added on to existing projects
+by simply adding ``cardroom`` to the list of installed apps.
 
 .. code-block:: python
 
@@ -32,101 +31,12 @@ Add ``cardroom`` to the installed apps.
        ...
    ]
 
-.. code-block:: python
-
-   from cardroom import Table
-   from pokerkit import (
-       BettingStructure,
-       Deck,
-       Opening,
-       StandardHighHand,
-       Street,
-   )
-   
-   
-   def callback(table, operation):
-       pass
-   
-   
-   table = Table(
-       6,
-       True,
-       Deck.STANDARD,
-       (StandardHighHand,),
-       (
-           Street(
-               False,
-               (False,) * 2,
-               0,
-               False,
-               Opening.POSITION,
-               1,
-               None,
-           ),
-           Street(
-               True,
-               (),
-               3,
-               False,
-               Opening.POSITION,
-               1,
-               None,
-           ),
-           Street(
-               True,
-               (),
-               1,
-               False,
-               Opening.POSITION,
-               1,
-               None,
-           ),
-           Street(
-               True,
-               (),
-               1,
-               False,
-               Opening.POSITION,
-               1,
-               None,
-           ),
-       ),
-       BettingStructure.NO_LIMIT,
-       True,
-       None,
-       (1, 2),
-       0,
-       range(80, 201),
-       30,
-       1,
-       1,
-       100,
-       0.05,
-       0.1,
-       0.05,
-       0.1,
-       0.1,
-       0.1,
-       10,
-       10,
-       10,
-       10,
-       3,
-       0.5,
-       0.5,
-       0.5,
-       1,
-       callback,
-   )
-   
-   table.run()
 
 Testing and Validation
 ----------------------
 
-Cardroom has extensive test coverage, passes mypy static type checking with
-strict parameter, and has been validated through extensive use in real-life
-scenarios.
+Cardroom has extensive test coverage, passes mypy static type checking, and has
+been validated through extensive use in real-life scenarios.
 
 Contributing
 ------------
