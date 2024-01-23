@@ -28,10 +28,9 @@ When making changes, please follow these guidelines:
 - Document your changes in the code and update the README file if necessary.
 - After making changes, please validate your changes.
 
-1. Run static type checking with ``--strict`` flag: ``mypy --strict cardroom``
+1. Run static type checking: ``mypy cardroom``
 2. Run style checking: ``flake8 cardroom``
-3. Run unit tests: ``python -m unittest``
-4. Run doctests: ``python -m doctest cardroom/*.py``
+3. Run unit tests: ``DJANGO_SETTINGS_MODULE=settings python -m cardroom test``
 
 Submitting a Pull Request
 -------------------------
@@ -41,8 +40,8 @@ Submitting a Pull Request
 3. Submit a pull request to the ``main`` branch in the Cardroom repository.
 
 Before submitting your pull request, please make sure the mypy static type
-checking with ``--strict`` flag, flake8, doctests, unit tests pass, and your
-code adheres to `PEP8 <https://peps.python.org/pep-0008/>`_.
+checking, flake8, unit tests pass, and your code adheres to
+`PEP8 <https://peps.python.org/pep-0008/>`_.
 
 After Your Pull Request Is Merged
 ---------------------------------
