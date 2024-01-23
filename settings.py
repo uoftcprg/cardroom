@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
 
     'cardroom',
 ]
@@ -131,6 +132,18 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Rest framework
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
+    ],
+    'DEFAULT_PAGINATION_CLASS': (
+        'rest_framework.pagination.PageNumberPagination'
+    ),
+    'PAGE_SIZE': 100,
+}
+
 # Cardroom
 # https://cardroom.readthedocs.io/en/stable/
 
@@ -150,10 +163,14 @@ CARDROOM_DECIMAL_PLACES = 0
 #
 # CARDROOM_DECIMAL_PLACES = 2
 
-# Enable views
-
-CARDROOM_VIEWS = True
-
 # Enable admin urls
 
-CARDROOM_ADMIN_URLS = True
+CARDROOM_ADMIN = True
+
+# Enable authentation APIs
+
+CARDROOM_AUTH = True
+
+# Enable felt
+
+CARDROOM_FELT = True

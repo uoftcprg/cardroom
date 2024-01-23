@@ -18,7 +18,7 @@ from cardroom.utilities import (
     get_divmod,
     get_parse_value,
     get_tzinfo,
-    get_views,
+    get_felt,
 )
 import cardroom.controller as controller
 import cardroom.table as table
@@ -147,18 +147,18 @@ class Controller(models.Model):
 class CashGame(Controller):
     table = models.ForeignKey(Table, models.PROTECT)
 
-    if get_views():
+    if get_felt():
         def get_absolute_url(
                 self,
                 namespace: str = CardroomConfig.name,
         ) -> str:
             try:
                 url = reverse(
-                    f'{namespace}:cash_game_detail',
+                    f'{namespace}:felt_cash_game_detail',
                     kwargs={'pk': self.pk},
                 )
             except NoReverseMatch:
-                url = reverse('cash_game_detail', kwargs={'pk': self.pk})
+                url = reverse('felt_cash_game_detail', kwargs={'pk': self.pk})
 
             return url
 
@@ -226,18 +226,21 @@ class HandHistory(models.Model):
             else:
                 yield field.name
 
-    if get_views():
+    if get_felt():
         def get_absolute_url(
                 self,
                 namespace: str = CardroomConfig.name,
         ) -> str:
             try:
                 url = reverse(
-                    f'{namespace}:hand_history_detail',
+                    f'{namespace}:felt_hand_history_detail',
                     kwargs={'pk': self.pk},
                 )
             except NoReverseMatch:
-                url = reverse('hand_history_detail', kwargs={'pk': self.pk})
+                url = reverse(
+                    'felt_hand_history_detail',
+                    kwargs={'pk': self.pk},
+                )
 
             return url
 

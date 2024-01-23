@@ -2,9 +2,36 @@ from dataclasses import asdict
 from typing import Any
 
 from django.views.generic import DetailView
+from rest_framework.viewsets import ModelViewSet
 
-from cardroom.models import CashGame, HandHistory
 from cardroom.felt import Settings, Data
+from cardroom.models import CashGame, HandHistory, Poker, Table
+from cardroom.serializers import (
+    CashGameSerializer,
+    HandHistorySerializer,
+    PokerSerializer,
+    TableSerializer,
+)
+
+
+class PokerViewSet(ModelViewSet):
+    queryset = Poker.objects.all()
+    serializer_class = PokerSerializer
+
+
+class TableViewSet(ModelViewSet):
+    queryset = Table.objects.all()
+    serializer_class = TableSerializer
+
+
+class CashGameViewSet(ModelViewSet):
+    queryset = CashGame.objects.all()
+    serializer_class = CashGameSerializer
+
+
+class HandHistoryViewSet(ModelViewSet):
+    queryset = HandHistory.objects.all()
+    serializer_class = HandHistorySerializer
 
 
 class CashGameDetailView(DetailView):  # type: ignore[type-arg]

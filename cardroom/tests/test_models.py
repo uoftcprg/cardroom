@@ -2,7 +2,7 @@ from pickle import dumps
 from textwrap import dedent
 
 from django.test import TestCase
-from pokerkit import NoLimitShortDeckHoldem, NoLimitTexasHoldem
+from pokerkit import Automation, NoLimitShortDeckHoldem, NoLimitTexasHoldem
 import pokerkit
 
 from cardroom.models import Poker, Table, HandHistory
@@ -196,7 +196,10 @@ class HandHistoryTestCase(TestCase):
             players = ["Bob", "Carol", "Ted", "Alice"]
             '''
         )
-        pkhh0 = pokerkit.HandHistory.loads(s, automations=())
+        pkhh0 = pokerkit.HandHistory.loads(
+            s,
+            automations=(Automation.CARD_BURNING,),
+        )
         hh0 = HandHistory.dump(pkhh0)
         hh0.save()
         hh1 = HandHistory.objects.first()

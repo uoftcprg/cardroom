@@ -11,8 +11,9 @@ import pokerkit
 DEFAULT_DIVMOD: str = 'cardroom.utilities.divmod'
 DEFAULT_PARSE_VALUE: str = 'cardroom.utilities.parse_value'
 DEFAULT_DECIMAL_PLACES: int | float = inf
-DEFAULT_VIEWS: bool = False
-DEFAULT_ADMIN_URLS: bool = False
+DEFAULT_ADMIN: bool = False
+DEFAULT_AUTH: bool = False
+DEFAULT_FELT: bool = False
 _divmod = divmod
 
 
@@ -77,9 +78,13 @@ def get_decimal_places() -> int | float:
     return getattr(settings, 'CARDROOM_DECIMAL_PLACES', DEFAULT_DECIMAL_PLACES)
 
 
-def get_views() -> bool:
-    return getattr(settings, 'CARDROOM_VIEWS', DEFAULT_VIEWS)
+def get_admin() -> bool:
+    return getattr(settings, 'CARDROOM_ADMIN', DEFAULT_ADMIN)
 
 
-def get_admin_urls() -> bool:
-    return getattr(settings, 'CARDROOM_ADMIN_URLS', DEFAULT_ADMIN_URLS)
+def get_auth() -> bool:
+    return getattr(settings, 'CARDROOM_AUTH', DEFAULT_AUTH)
+
+
+def get_felt() -> bool:
+    return getattr(settings, 'CARDROOM_FELT', DEFAULT_FELT)
