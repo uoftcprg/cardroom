@@ -34,7 +34,7 @@ class HandHistoryViewSet(ModelViewSet):
     serializer_class = HandHistorySerializer
 
 
-class CashGameDetailView(DetailView):  # type: ignore[type-arg]
+class CashGameDetailView(DetailView):
     model = CashGame
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -45,7 +45,7 @@ class CashGameDetailView(DetailView):  # type: ignore[type-arg]
         return context
 
 
-class HandHistoryDetailView(DetailView):  # type: ignore[type-arg]
+class HandHistoryDetailView(DetailView):
     model = HandHistory
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
