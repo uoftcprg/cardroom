@@ -51,17 +51,7 @@ class Variant(models.TextChoices):
 
 
 class Poker(models.Model):
-    automations: ClassVar[tuple[Automation, ...]] = (
-        Automation.ANTE_POSTING,
-        Automation.BET_COLLECTION,
-        Automation.BLIND_OR_STRADDLE_POSTING,
-        Automation.CARD_BURNING,
-        Automation.BOARD_DEALING,
-        Automation.HOLE_DEALING,
-        Automation.HAND_KILLING,
-        Automation.CHIPS_PUSHING,
-        Automation.CHIPS_PULLING,
-    )
+    automations: ClassVar[tuple[Automation]] = (Automation.CARD_BURNING,)
     name = models.CharField(max_length=255, unique=True)
     variant = models.CharField(max_length=255, choices=Variant.choices)
     ante_trimming_status = models.BooleanField(default=False)
@@ -154,11 +144,11 @@ class CashGame(Controller):
         ) -> str:
             try:
                 url = reverse(
-                    f'{namespace}:felt_cash_game_detail',
+                    f'{namespace}:cash_game_felt',
                     kwargs={'pk': self.pk},
                 )
             except NoReverseMatch:
-                url = reverse('felt_cash_game_detail', kwargs={'pk': self.pk})
+                url = reverse('cash_game_felt', kwargs={'pk': self.pk})
 
             return url
 
@@ -233,14 +223,11 @@ class HandHistory(models.Model):
         ) -> str:
             try:
                 url = reverse(
-                    f'{namespace}:felt_hand_history_detail',
+                    f'{namespace}:hand_history_felt',
                     kwargs={'pk': self.pk},
                 )
             except NoReverseMatch:
-                url = reverse(
-                    'felt_hand_history_detail',
-                    kwargs={'pk': self.pk},
-                )
+                url = reverse('hand_history_felt', kwargs={'pk': self.pk})
 
             return url
 

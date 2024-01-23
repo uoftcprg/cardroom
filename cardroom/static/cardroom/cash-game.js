@@ -75,7 +75,7 @@ const smCards = document.getElementById("sm-cards");
 const pk = JSON.parse(document.getElementById("pk").textContent);
 const settings = JSON.parse(document.getElementById("settings").textContent);
 let dataGuard = true;
-let data = JSON.parse(document.getElementById("data").textContent);
+let data = [JSON.parse(document.getElementById("data").textContent)];
 const felt = new Felt(canvas.width, canvas.height, 1000, canvas, settings, getData);
 let protocol;
 

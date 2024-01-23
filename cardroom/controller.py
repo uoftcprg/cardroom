@@ -42,15 +42,6 @@ class Controller(ABC):
     """The value parser."""
     tzinfo: ZoneInfo
     """The timezone."""
-    time_banks: dict[str, float] = field(default_factory=dict, init=False)
-    """The time banks."""
-    timestamp: datetime = field(init=False)
-    """The timestamp."""
-    auto_timestamp: datetime | None = field(default=None, init=False)
-    """The auto timestamp."""
-
-    def __post_init__(self) -> None:
-        self.timestamp = datetime.now(self.tzinfo)
 
     @abstractmethod
     def mainloop(self) -> None:
@@ -62,6 +53,9 @@ class Controller(ABC):
 
     def _run(self, table: Table, queue: Queue[tuple[str, Any]]) -> None:
 
+        def get_now_timestamp() -> datetime:
+            return datetime.now(self.tzinfo)
+
         def is_past_timestamp(timestamp: datetime | None) -> bool:
             if timestamp is None:
                 status = False
@@ -70,16 +64,8 @@ class Controller(ABC):
 
             return status
 
-        def get_now_timestamp() -> datetime:
-            return datetime.now(self.tzinfo)
-
-        def get_future_timestamp(timeout: float | None) -> datetime | None:
-            if timeout is None:
-                timestamp = None
-            else:
-                timestamp = get_now_timestamp() + timedelta(seconds=timeout)
-
-            return timestamp
+        def get_future_timestamp(timeout: float) -> datetime:
+            return get_now_timestamp() + timedelta(seconds=timeout)
 
         def get_auto_timestamp() -> datetime | None:
             return cast(
@@ -112,6 +98,9 @@ class Controller(ABC):
 
             return event
 
+        def append_data() -> None:
+            data.append(Data.from_table(table))
+
         state_construction_timestamp = None
         state_destruction_timestamp = None
         idle_timestamps = dict[str, datetime | None]()
@@ -141,9 +130,6 @@ class Controller(ABC):
                         self.parse_value(starting_stack),
                     )
                 case _:
-                    if table.can_be_back(user):
-                        table.be_back(user)
-
                     player_index = table.get_seat(user).player_index
 
                     if player_index is None:
@@ -164,6 +150,7 @@ class Controller(ABC):
                     betting_timestamp = None
                     hole_cards_showing_or_mucking_timestamp = None
 
+        time_banks = dict[str, float]()
         data = list[Data]()
 
         while True:
@@ -178,7 +165,7 @@ class Controller(ABC):
                     except ValueError:
                         print_exc()
                     else:
-                        data.append(Data.from_table(table))
+                        append_data()
                 else:
                     warn('cannot handle event')
 
@@ -186,45 +173,6 @@ class Controller(ABC):
 
             while data_count != len(data):
                 data_count = len(data)
-                state_construction_timeout = None
-
-                if table.can_construct_state():
-                    if is_past_timestamp(state_construction_timestamp):
-                        state_construction_timestamp = None
-
-                        table.construct_state()
-                        data.append(Data.from_table(table))
-                    else:
-                        state_construction_timeout = (
-                            self.state_construction_timeout
-                        )
-
-                state_construction_timestamp = min_or_none(
-                    (
-                        state_construction_timestamp,
-                        get_future_timestamp(state_construction_timeout),
-                    ),
-                )
-                state_destruction_timeout = None
-
-                if table.can_destroy_state():
-                    if is_past_timestamp(state_destruction_timestamp):
-                        state_destruction_timestamp = None
-
-                        table.destroy_state()
-                        data.append(Data.from_table(table))
-                        # TODO: increase time banks
-                    else:
-                        state_destruction_timeout = (
-                            self.state_destruction_timeout
-                        )
-
-                state_destruction_timestamp = min_or_none(
-                    (
-                        state_destruction_timestamp,
-                        get_future_timestamp(state_destruction_timeout),
-                    ),
-                )
 
                 for user in table.users:
                     seat = table.get_seat(user)
@@ -235,104 +183,139 @@ class Controller(ABC):
                             and table.can_sit_out(user)
                     ):
                         table.sit_out(user)
-                        data.append(Data.from_table(table))
 
-                    idle_timeout = None
+                    status = is_past_timestamp(idle_timestamps.get(user))
 
                     if (
-                        not seat.active_status
-                        and table.can_leave(user)
+                            status
+                            or seat.active_status
+                            or not table.can_leave(user)
                     ):
-                        if is_past_timestamp(idle_timestamps.get(user)):
-                            idle_timestamps[user] = None
+                        idle_timestamps[user] = None
+                    elif idle_timestamps.get(user) is None:
+                        idle_timestamps[user] = get_future_timestamp(
+                            self.idle_timeout,
+                        )
 
-                            table.leave(user)
-                            data.append(Data.from_table(table))
-                        else:
-                            idle_timeout = self.idle_timeout
+                    if (
+                            status
+                            and not seat.active_status
+                            and table.can_leave(user)
+                    ):
+                        table.leave(user)
+                        append_data()
 
-                    idle_timestamps[user] = get_future_timestamp(idle_timeout)
+                status = is_past_timestamp(state_construction_timestamp)
+
+                if status or not table.can_construct_state():
+                    state_construction_timestamp = None
+                elif state_construction_timestamp is None:
+                    state_construction_timestamp = get_future_timestamp(
+                        self.state_construction_timeout,
+                    )
+
+                if status and table.can_construct_state():
+                    table.construct_state()
+                    append_data()
+
+                status = is_past_timestamp(state_destruction_timestamp)
+
+                if status or not table.can_destroy_state():
+                    state_destruction_timestamp = None
+                elif state_destruction_timestamp is None:
+                    state_destruction_timestamp = get_future_timestamp(
+                        self.state_destruction_timeout,
+                    )
+
+                if status and table.can_destroy_state():
+                    table.destroy_state()
+                    append_data()
 
                 if table.state is not None:
-                    standing_pat_timeout = None
+                    status = True
 
-                    if table.state.can_stand_pat_or_discard():
-                        if is_past_timestamp(standing_pat_timestamp):
-                            standing_pat_timestamp = None
+                    if table.state.can_post_ante():
+                        table.state.post_ante()
+                    elif table.state.can_collect_bets():
+                        table.state.collect_bets()
+                    elif table.state.can_post_blind_or_straddle():
+                        table.state.post_blind_or_straddle()
+                    elif table.state.can_deal_board():
+                        table.state.deal_board()
+                    elif table.state.can_deal_hole():
+                        table.state.deal_hole()
+                    elif table.state.can_kill_hand():
+                        table.state.kill_hand()
+                    elif table.state.can_push_chips():
+                        table.state.push_chips()
+                    elif table.state.can_pull_chips():
+                        table.state.pull_chips()
+                    else:
+                        status = False
 
-                            table.state.stand_pat_or_discard()
-                            data.append(Data.from_table(table))
+                    if status:
+                        append_data()
+
+                    status = is_past_timestamp(standing_pat_timestamp)
+
+                    if status or not table.state.can_stand_pat_or_discard():
+                        standing_pat_timestamp = None
+                    else:
+                        standing_pat_timestamp = get_future_timestamp(
+                            self.standing_pat_timeout,
+                        )
+
+                    if status and table.state.can_stand_pat_or_discard():
+                        table.state.stand_pat_or_discard()
+                        append_data()
+
+                    status = is_past_timestamp(betting_timestamp)
+
+                    if status or table.state.actor_index is None:
+                        betting_timestamp = None
+                    else:
+                        betting_timestamp = get_future_timestamp(
+                            self.betting_timeout,
+                        )
+
+                    if status and table.state.actor_index is not None:
+                        if table.state.can_fold():
+                            table.state.fold()
+                        elif table.state.can_check_or_call():
+                            table.state.check_or_call()
+                        elif table.state.can_post_bring_in():
+                            table.state.post_bring_in()
                         else:
-                            standing_pat_timeout = self.standing_pat_timeout
+                            raise AssertionError
 
-                    standing_pat_timestamp = min_or_none(
-                        (
-                            standing_pat_timestamp,
-                            get_future_timestamp(standing_pat_timeout),
-                        ),
+                        append_data()
+
+                    status = is_past_timestamp(
+                        hole_cards_showing_or_mucking_timestamp,
                     )
-                    betting_timeout = None
 
-                    if table.state.actor_index is not None:
-                        # TODO: use time banks
-
-                        if is_past_timestamp(betting_timestamp):
-                            betting_timestamp = None
-
-                            if table.state.can_fold():
-                                table.state.fold()
-                                data.append(Data.from_table(table))
-                            elif table.state.can_check_or_call():
-                                table.state.check_or_call()
-                                data.append(Data.from_table(table))
-                            elif table.state.can_post_bring_in():
-                                table.state.post_bring_in()
-                                data.append(Data.from_table(table))
-                            else:
-                                raise AssertionError
-                        else:
-                            betting_timeout = self.betting_timeout
-
-                    betting_timestamp = min_or_none(
-                        (
-                            betting_timestamp,
-                            get_future_timestamp(betting_timeout),
-                        ),
-                    )
-                    hole_cards_showing_or_mucking_timeout = None
-
-                    if table.state.can_show_or_muck_hole_cards():
-                        if (
-                                is_past_timestamp(
-                                    hole_cards_showing_or_mucking_timestamp,
-                                )
-                        ):
-                            hole_cards_showing_or_mucking_timestamp = None
-
-                            table.state.show_or_muck_hole_cards()
-                            data.append(Data.from_table(table))
-                        else:
-                            hole_cards_showing_or_mucking_timeout = (
-                                self.hole_cards_showing_or_mucking_timeout
-                            )
-
-                    hole_cards_showing_or_mucking_timestamp = min_or_none(
-                        (
-                            hole_cards_showing_or_mucking_timestamp,
+                    if status or not table.state.can_show_or_muck_hole_cards():
+                        hole_cards_showing_or_mucking_timestamp = None
+                    elif hole_cards_showing_or_mucking_timestamp is None:
+                        hole_cards_showing_or_mucking_timestamp = (
                             get_future_timestamp(
-                                hole_cards_showing_or_mucking_timeout,
-                            ),
-                        ),
-                    )
+                                self.hole_cards_showing_or_mucking_timeout,
+                            )
+                        )
+
+                    if status and table.state.can_show_or_muck_hole_cards():
+                        table.state.show_or_muck_hole_cards()
+                        append_data()
 
             for user in set(idle_timestamps) - set(table.users):
                 idle_timestamps.pop(user)
 
-            for user in set(self.time_banks) - set(table.users):
-                self.time_banks.pop(user)
+            for user in set(time_banks) - set(table.users):
+                time_banks.pop(user)
 
-            self.timestamp = get_now_timestamp()
-            self.auto_timestamp = get_auto_timestamp()
+            # TODO: send over
+            # timestamp = get_now_timestamp()
+            # auto_timestamp = get_auto_timestamp()
 
             self.callback(data)
             data.clear()

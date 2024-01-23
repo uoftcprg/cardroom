@@ -1,10 +1,12 @@
 from dataclasses import asdict
 from typing import Any
 
+from django.http import JsonResponse
 from django.views.generic import DetailView
 from rest_framework.viewsets import ModelViewSet
 
 from cardroom.felt import Settings, Data
+from cardroom.gamemaster import get_data
 from cardroom.models import CashGame, HandHistory, Poker, Table
 from cardroom.serializers import (
     CashGameSerializer,
@@ -34,25 +36,45 @@ class HandHistoryViewSet(ModelViewSet):
     serializer_class = HandHistorySerializer
 
 
-class CashGameDetailView(DetailView):
+class CashGameFeltView(DetailView):
+    model = CashGame
+    template_name = 'cardroom/cash-game.html'
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['settings'] = asdict(Settings())
+        data = asdict(get_data(self.object))
+        context['data'] = data
+
+        return context
+
+
+class HandHistoryFeltView(DetailView):
+    model = HandHistory
+    template_name = 'cardroom/hand-history.html'
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['settings'] = asdict(Settings())
+        data = tuple(map(asdict, Data.from_hand_history(self.object.load())))
+        context['data'] = data
+
+        return context
+
+
+class CashGameFeltDataView(DetailView):
     model = CashGame
 
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        context['settings'] = asdict(Settings())
-        context['data'] = (asdict(Data()),)
+    def render_to_response(self, context, **response_kwargs):
+        data = asdict(get_data(self.object))
 
-        return context
+        return JsonResponse(data)
 
 
-class HandHistoryDetailView(DetailView):
+class HandHistoryFeltDataView(DetailView):
     model = HandHistory
 
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        context['settings'] = asdict(Settings())
-        context['data'] = tuple(
-            map(asdict, Data.from_hand_history(self.object.load())),
-        )
+    def render_to_response(self, context, **response_kwargs):
+        data = tuple(map(asdict, Data.from_hand_history(self.object.load())))
 
-        return context
+        return JsonResponse(data, safe=False)

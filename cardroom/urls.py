@@ -5,9 +5,11 @@ from rest_framework.routers import DefaultRouter
 from cardroom.apps import CardroomConfig
 from cardroom.utilities import get_admin, get_auth, get_felt
 from cardroom.views import (
-    CashGameDetailView,
+    CashGameFeltDataView,
+    CashGameFeltView,
     CashGameViewSet,
-    HandHistoryDetailView,
+    HandHistoryFeltDataView,
+    HandHistoryFeltView,
     HandHistoryViewSet,
     PokerViewSet,
     TableViewSet,
@@ -15,12 +17,18 @@ from cardroom.views import (
 
 app_name: str = CardroomConfig.name
 router = DefaultRouter()
-urlpatterns: list[URLPattern | URLResolver] = []
+urlpatterns: list[URLPattern | URLResolver] = [
+    path('cash-games/<int:pk>/felt/data/', CashGameFeltDataView.as_view()),
+    path(
+        'hand-histories/<int:pk>/felt/data/',
+        HandHistoryFeltDataView.as_view(),
+    ),
+]
 
 router.register('poker', PokerViewSet)
-router.register('table', TableViewSet)
-router.register('cash-game', CashGameViewSet)
-router.register('hand-history', HandHistoryViewSet)
+router.register('tables', TableViewSet)
+router.register('cash-games', CashGameViewSet)
+router.register('hand-histories', HandHistoryViewSet)
 
 if get_admin():
     urlpatterns.append(path('admin/', admin.site.urls))
@@ -31,16 +39,16 @@ if get_auth():
 if get_felt():
     urlpatterns.append(
         path(
-            'felt/cash-game/<int:pk>/',
-            CashGameDetailView.as_view(),
-            name='felt_cash_game_detail',
+            'cash-games/<int:pk>/felt/',
+            CashGameFeltView.as_view(),
+            name='cash_game_felt',
         ),
     )
     urlpatterns.append(
         path(
-            'felt/hand-history/<int:pk>/',
-            HandHistoryDetailView.as_view(),
-            name='felt_hand_history_detail',
+            'hand-histories/<int:pk>/felt/',
+            HandHistoryFeltView.as_view(),
+            name='hand_history_felt',
         ),
     )
 
