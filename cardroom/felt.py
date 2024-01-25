@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field, KW_ONLY
+from itertools import chain
 from math import pi
 from typing import overload, TypeVar
 
@@ -146,7 +147,7 @@ class Data:
     actor: int | None = None
 
     @classmethod
-    def from_table(cls, table: Table) -> Data:
+    def from_table(cls, table: Table) -> dict[str | None, Data]:
         button = None if table.button is None else table.button.seat_index
         hole_statuses = list[bool]()
 
@@ -166,7 +167,6 @@ class Data:
         names = []
         bets = list[int | None]()
         stacks = list[int | None]()
-        holes = list[list[Card] | None]()
 
         for seat in table.seats:
             names.append(seat.user)
@@ -174,11 +174,9 @@ class Data:
             if seat.player_index is None or table.state is None:
                 bets.append(None)
                 stacks.append(seat.starting_stack)
-                holes.append(None)
             else:
                 bets.append(table.state.bets[seat.player_index])
                 stacks.append(table.state.stacks[seat.player_index])
-                holes.append(table.state.hole_cards[seat.player_index].copy())
 
                 if (
                         (
@@ -190,19 +188,43 @@ class Data:
                 ):
                     actor = seat.index
 
-        return Data(
-            names=names,
-            button=button,
-            bets=bets,
-            stacks=stacks,
-            pots=pots,
-            holes=holes,
-            hole_statuses=hole_statuses,
-            board=board,
-            board_count=board_count,
-            previous_action=previous_action,
-            actor=actor,
-        )
+        data = {}
+
+        for user in chain(table.users, (None,)):
+            holes = list[list[Card] | None]()
+
+            for seat in table.seats:
+                if seat.player_index is None or table.state is None:
+                    holes.append(None)
+                else:
+                    hole_cards = list[Card]()
+
+                    for card, status in zip(
+                            table.state.hole_cards[seat.player_index],
+                            table.state.hole_card_statuses[seat.player_index],
+                    ):
+                        if status or user == seat.user:
+                            hole_cards.append(card)
+                        else:
+                            hole_cards.extend(Card.parse('??'))
+
+                    holes.append(hole_cards)
+
+            data[user] = Data(
+                names=names,
+                button=button,
+                bets=bets,
+                stacks=stacks,
+                pots=pots,
+                holes=holes,
+                hole_statuses=hole_statuses,
+                board=board,
+                board_count=board_count,
+                previous_action=previous_action,
+                actor=actor,
+            )
+
+        return data
 
     @classmethod
     def from_hand_history(cls, hand_history: HandHistory) -> Iterator[Data]:

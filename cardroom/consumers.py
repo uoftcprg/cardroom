@@ -28,7 +28,7 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
             self.controller.group_name,
             self.channel_name,
         )
-        self.update({'data': (asdict(get_data(self.controller)),)})
+        self.data({'type': 'data', 'data': (get_data(self.controller),)})
 
     def disconnect(self, code):
         async_to_sync(self.channel_layer.group_discard)(
@@ -41,7 +41,13 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
         if self.user.is_authenticated:
             handle(self.controller, self.user, content)
 
-    def update(self, event):
+    def data(self, event):
+        event['data'] = [
+            asdict(
+                data.get(self.user.username, data[None]),
+            ) for data in event['data']
+        ]
+
         self.send_json(event)
 
 

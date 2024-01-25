@@ -36,7 +36,7 @@ class Controller(ABC):
     """The betting timeout."""
     hole_cards_showing_or_mucking_timeout: float
     """The hole cards showing or mucking timeout."""
-    callback: Callable[[list[Data]], Any]
+    callback: Callable[[list[dict[str | None, Data]]], Any]
     """The callback."""
     parse_value: Callable[[str], int]
     """The value parser."""
@@ -90,8 +90,6 @@ class Controller(ABC):
                 )
             else:
                 timeout = None
-
-            print('Auto in...', timeout)
 
             try:
                 event = queue.get(timeout=timeout)
@@ -153,7 +151,7 @@ class Controller(ABC):
                     hole_cards_showing_or_mucking_timestamp = None
 
         time_banks = dict[str, float]()
-        data = list[Data]()
+        data = list[dict[str | None, Data]]()
 
         while True:
             user_action = get_event()

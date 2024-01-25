@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from threading import Thread, Lock
 
 from asgiref.sync import async_to_sync
@@ -41,7 +40,7 @@ def broadcast(model, data_):
 
         async_to_sync(get_channel_layer().group_send)(
             model.group_name,
-            {'type': 'update', 'data': tuple(map(asdict, data_))},
+            {'type': 'data', 'data': data_},
         )
 
 
@@ -49,4 +48,4 @@ def get_data(model):
     key = model.group_name
 
     with data_lock:
-        return data.get(key, Data())
+        return data.get(key, {None: Data()})

@@ -43,7 +43,8 @@ class CashGameFeltView(DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['settings'] = asdict(Settings())
-        data = asdict(get_data(self.object))
+        data = get_data(self.object)
+        data = asdict(data.get(self.request.user.username, data[None]))
         context['data'] = data
 
         return context
@@ -66,7 +67,8 @@ class CashGameFeltDataView(DetailView):
     model = CashGame
 
     def render_to_response(self, context, **response_kwargs):
-        data = asdict(get_data(self.object))
+        data = get_data(self.object)
+        data = asdict(data.get(self.request.user.username, data[None]))
 
         return JsonResponse(data)
 
