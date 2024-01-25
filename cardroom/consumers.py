@@ -38,7 +38,8 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
         super().disconnect(code)
 
     def receive_json(self, content, **kwargs):
-        handle(self.controller, self.user, content)
+        if self.user.is_authenticated:
+            handle(self.controller, self.user, content)
 
     def update(self, event):
         self.send_json(event)
