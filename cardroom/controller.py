@@ -18,8 +18,6 @@ from cardroom.table import Table
 
 @dataclass
 class Controller(ABC):
-    name: str
-    """The name."""
     time_bank: float
     """The time bank."""
     time_bank_increment: float

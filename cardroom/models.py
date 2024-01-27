@@ -52,7 +52,6 @@ class Variant(models.TextChoices):
 
 class Poker(models.Model):
     automations: ClassVar[tuple[Automation]] = (Automation.CARD_BURNING,)
-    name = models.CharField(max_length=255, unique=True)
     variant = models.CharField(max_length=255, choices=Variant.choices)
     ante_trimming_status = models.BooleanField(default=False)
     raw_antes = models.JSONField()
@@ -61,9 +60,6 @@ class Poker(models.Model):
     small_bet = models.JSONField(blank=True, null=True)
     big_bet = models.JSONField(blank=True, null=True)
     min_bet = models.JSONField(blank=True, null=True)
-
-    def __str__(self) -> str:
-        return self.name
 
     def load(self) -> pokerkit.Poker:
 
@@ -113,7 +109,6 @@ class Table(models.Model):
 
 
 class Controller(models.Model):
-    name = models.CharField(max_length=255, unique=True)
     time_bank = models.FloatField()
     time_bank_increment = models.FloatField()
     state_construction_timeout = models.FloatField()
@@ -126,9 +121,6 @@ class Controller(models.Model):
     @property
     def group_name(self) -> str:
         return f'{type(self).__name__}-{self.pk}'
-
-    def __str__(self) -> str:
-        return self.name
 
     class Meta:
         abstract = True
@@ -154,7 +146,6 @@ class CashGame(Controller):
 
     def load(self) -> controller.CashGame:
         return controller.CashGame(
-            self.name,
             self.time_bank,
             self.time_bank_increment,
             self.state_construction_timeout,

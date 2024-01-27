@@ -19,7 +19,6 @@ class PokerTestCase(PickleTestCaseMixin, TestCase):
     def test_load(self) -> None:
         self.assertPickleEqual(
             Poker.objects.create(
-                name='a',
                 variant='NT',
                 raw_antes={1: 3},
                 raw_blinds_or_straddles=[1, 2],
@@ -36,7 +35,6 @@ class PokerTestCase(PickleTestCaseMixin, TestCase):
         )
         self.assertPickleEqual(
             Poker.objects.create(
-                name='b',
                 variant='NT',
                 raw_antes=[0, 3],
                 raw_blinds_or_straddles=[1, 2],
@@ -53,7 +51,6 @@ class PokerTestCase(PickleTestCaseMixin, TestCase):
         )
         self.assertPickleEqual(
             Poker.objects.create(
-                name='c',
                 variant='NT',
                 ante_trimming_status=True,
                 raw_antes=0,
@@ -71,7 +68,6 @@ class PokerTestCase(PickleTestCaseMixin, TestCase):
         )
         self.assertPickleEqual(
             Poker.objects.create(
-                name='d',
                 variant='NS',
                 ante_trimming_status=True,
                 raw_antes=2,
@@ -92,7 +88,6 @@ class PokerTestCase(PickleTestCaseMixin, TestCase):
 class TableTestCase(PickleTestCaseMixin, TestCase):
     def test_load(self) -> None:
         game = Poker.objects.create(
-            name='a',
             variant='NT',
             raw_antes={1: 3},
             raw_blinds_or_straddles=[1, 2],
