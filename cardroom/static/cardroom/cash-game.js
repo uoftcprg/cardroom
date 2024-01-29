@@ -63,7 +63,13 @@ function shifter() {
 		data.shift();
 }
 
+function createWebSocket() {
+	return new WebSocket(`${protocol}//${location.host}${websocketURL}`);
+}
+
 function watchdog() {
+	if (webSocket.readyState == webSocket.CLOSED)
+		webSocket = createWebSocket();
 }
 
 const canvas = document.getElementById("felt");
@@ -87,7 +93,7 @@ else if (location.protocol === "https:")
 else
 	protocol = "";
 
-const webSocket = new WebSocket(`${protocol}//${location.host}${websocketURL}`);
+let webSocket = createWebSocket();
 webSocket.onmessage = function(event) {
 	eventData = JSON.parse(event.data);
 
@@ -109,3 +115,4 @@ webSocket.onclose = function(event) {
 }
 
 setInterval(shifter, settings["shifter_timeout"] * 1000);
+setInterval(watchdog, settings["watchdog_timeout"] * 1000);
