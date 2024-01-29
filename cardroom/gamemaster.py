@@ -32,7 +32,7 @@ data_lock = Lock()
 data = {}
 
 
-def broadcast(model, data_=None):
+def broadcast(model, data_, user_message):
     key = model.group_name
 
     if data_ is not None and data_:
@@ -42,6 +42,14 @@ def broadcast(model, data_=None):
         async_to_sync(get_channel_layer().group_send)(
             model.group_name,
             {'type': 'data', 'data': serialize(data_)},
+        )
+
+    if user_message is not None:
+        user, message = user_message
+
+        async_to_sync(get_channel_layer().group_send)(
+            model.group_name,
+            {'type': 'message', 'user': user, 'message': message},
         )
 
 

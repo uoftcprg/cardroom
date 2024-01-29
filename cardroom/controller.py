@@ -34,7 +34,7 @@ class Controller(ABC):
     """The betting timeout."""
     hole_cards_showing_or_mucking_timeout: float
     """The hole cards showing or mucking timeout."""
-    callback: Callable[[list[dict[str, Data]]], Any]
+    callback: Callable[[list[dict[str, Data], tuple[str, str] | None]], Any]
     """The callback."""
     parse_value: Callable[[str], int]
     """The value parser."""
@@ -147,6 +147,7 @@ class Controller(ABC):
 
         time_banks = dict[str, float]()
         data = list[dict[str, Data]]()
+        user_error = None
 
         while True:
             user_action = get_event()
@@ -157,7 +158,9 @@ class Controller(ABC):
                 if isinstance(action, str):
                     try:
                         parse_user_action()
-                    except ValueError:
+                    except ValueError as exception:
+                        user_error = user, str(exception)
+
                         print_exc()
                     else:
                         append_data()
@@ -335,9 +338,11 @@ class Controller(ABC):
             # timestamp = get_now_timestamp()
             # auto_timestamp = get_auto_timestamp()
 
-            if data:
-                self.callback(data)
-                data.clear()
+            if data or user_error is not None:
+                self.callback(data, user_error)
+
+            data.clear()
+            user_error = None
 
 
 @dataclass

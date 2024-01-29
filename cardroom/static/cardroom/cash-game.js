@@ -89,9 +89,20 @@ else
 
 const webSocket = new WebSocket(`${protocol}//${location.host}${websocketURL}`);
 webSocket.onmessage = function(event) {
-	dataGuard = true;
+	eventData = JSON.parse(event.data);
 
-	data.push(...JSON.parse(event.data).data);
+	switch (eventData.type) {
+	case "data":
+		dataGuard = true;
+
+		data.push(...eventData["data"]);
+
+		break;
+	case "message":
+		alert(eventData["message"]);
+
+		break;
+	}
 }
 webSocket.onclose = function(event) {
 	console.error("Cash game socket closed unexpectedly");

@@ -29,7 +29,7 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
             self.channel_name,
         )
         self.data(
-            {'type': 'data!', 'data': (serialize(get_data(self.controller)),)},
+            {'type': 'data', 'data': (serialize(get_data(self.controller)),)},
         )
 
     def disconnect(self, code):
@@ -42,6 +42,14 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
     def receive_json(self, content, **kwargs):
         if self.user.is_authenticated:
             handle(self.controller, self.user, content)
+        else:
+            self.message(
+                {
+                    'type': 'message',
+                    'user': '',
+                    'message': 'you are unauthenticated',
+                },
+            )
 
     def data(self, event):
         self.send_json(
@@ -57,6 +65,16 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
                 }
             ),
         )
+
+    def message(self, event):
+        if (
+                (self.user.is_anonymous and not event['user'])
+                or (
+                    self.user.is_authenticated
+                    and event['user'] == self.user.username
+                )
+        ):
+            self.send_json(event)
 
 
 class CashGameConsumer(ControllerConsumer):
