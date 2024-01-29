@@ -6,7 +6,7 @@ from itertools import chain
 from math import pi
 from typing import overload, TypeVar
 
-from pokerkit import Card, HandHistory
+from pokerkit import Card, CompletionBettingOrRaisingTo, HandHistory
 
 from cardroom.table import Table
 
@@ -145,6 +145,17 @@ class Data:
     board_count: int = 0
     previous_action: tuple[int, str] | None = None
     actor: int | None = None
+    join: list[int] | None = None
+    leave: bool = False
+    sit_out: bool = False
+    be_back: bool = False
+    buy_rebuy_top_off_or_rat_hole: tuple[int, int] | None = None
+    stand_pat_or_discard: list[Card] | None = None
+    fold: bool = False
+    check_or_call: int | None = None
+    post_bring_in: int | None = None
+    complete_bet_or_raise_to: tuple[bool, bool, int, int] | None = None
+    show_or_muck_hole_cards: bool | None = None
 
     @classmethod
     def from_table(cls, table: Table) -> dict[str, Data]:
@@ -192,11 +203,98 @@ class Data:
 
         for user in chain(table.users, ('',)):
             holes = list[list[Card] | None]()
+            join = [i for i in table.seat_indices if table.can_join(user, i)]
+
+            if not join:
+                join = None
+
+            leave = table.can_leave(user)
+            sit_out = table.can_sit_out(user)
+            be_back = table.can_be_back(user)
+
+            if table.can_buy_rebuy_top_off_or_rat_hole(user):
+                buy_rebuy_top_off_or_rat_hole = (
+                    table.min_starting_stack,
+                    table.max_starting_stack,
+                )
+            else:
+                buy_rebuy_top_off_or_rat_hole = None
+
+            stand_pat_or_discard = None
+            fold = False
+            check_or_call = None
+            post_bring_in = None
+            complete_bet_or_raise_to = None
+            show_or_muck_hole_cards = None
+            seat_or_none = table.get_seat_or_none(user)
+
+            if seat_or_none is not None and seat_or_none is table.acting_seat:
+                assert table.state is not None
+
+                if table.state.can_stand_pat_or_discard():
+                    assert (
+                        table.state.stander_pat_or_discarder_index
+                        is not None
+                    )
+
+                    stand_pat_or_discard = list(
+                        table.state.get_down_cards(
+                            table.state.stander_pat_or_discarder_index,
+                        ),
+                    )
+
+                if table.state.can_fold():
+                    fold = True
+
+                if table.state.can_check_or_call():
+                    check_or_call = table.state.checking_or_calling_amount
+
+                if table.state.can_post_bring_in():
+                    post_bring_in = table.state.bring_in
+
+                if table.state.can_complete_bet_or_raise_to():
+                    assert (
+                        table.state.min_completion_betting_or_raising_to_amount
+                        is not None
+                    )
+                    assert (
+                        table.state.max_completion_betting_or_raising_to_amount
+                        is not None
+                    )
+
+                    complete_bet_or_raise_to = (
+                        (
+                            table.state.street_index == 0
+                            and (
+                                CompletionBettingOrRaisingTo
+                                not in set(map(type, table.state.operations))
+                            )
+                        ),
+                        any(table.state.bets),
+                        (
+                            table
+                            .state
+                            .min_completion_betting_or_raising_to_amount
+                        ),
+                        (
+                            table
+                            .state
+                            .max_completion_betting_or_raising_to_amount
+                        ),
+                    )
+
+                if table.state.can_show_or_muck_hole_cards():
+                    assert table.state.showdown_index is not None
+
+                    show_or_muck_hole_cards = table.state.can_win_now(
+                        table.state.showdown_index,
+                    )
 
             for seat in table.seats:
-                if seat.player_index is None or table.state is None:
-                    holes.append(None)
-                else:
+                if seat.player_status:
+                    assert seat.player_index is not None
+                    assert table.state is not None
+
                     hole_cards = list[Card]()
 
                     for card, status in zip(
@@ -209,6 +307,8 @@ class Data:
                             hole_cards.extend(Card.parse('??'))
 
                     holes.append(hole_cards)
+                else:
+                    holes.append(None)
 
             data[user] = Data(
                 names=names,
@@ -222,6 +322,17 @@ class Data:
                 board_count=board_count,
                 previous_action=previous_action,
                 actor=actor,
+                join=join,
+                leave=leave,
+                sit_out=sit_out,
+                be_back=be_back,
+                buy_rebuy_top_off_or_rat_hole=buy_rebuy_top_off_or_rat_hole,
+                stand_pat_or_discard=stand_pat_or_discard,
+                fold=fold,
+                check_or_call=check_or_call,
+                post_bring_in=post_bring_in,
+                complete_bet_or_raise_to=complete_bet_or_raise_to,
+                show_or_muck_hole_cards=show_or_muck_hole_cards,
             )
 
         return data

@@ -411,28 +411,30 @@ class Table:
     def verify_buying_rebuying_topping_off_or_rat_holing(
             self,
             user: str,
-            starting_stack: int,
+            starting_stack: int | None = None,
     ) -> Seat:
         seat = self.get_seat(user)
 
         if not seat.active_status:
             raise ValueError('inactive user')
-        elif starting_stack < self.min_starting_stack:
-            raise ValueError('below minimum starting stack')
-        elif starting_stack > self.max_starting_stack:
-            raise ValueError('above maximum starting stack')
-        elif (
-                seat.starting_stack is not None
-                and seat.starting_stack > starting_stack
-        ):
-            warn('rat-holing')
+
+        if starting_stack is not None:
+            if starting_stack < self.min_starting_stack:
+                raise ValueError('below minimum starting stack')
+            elif starting_stack > self.max_starting_stack:
+                raise ValueError('above maximum starting stack')
+            elif (
+                    seat.starting_stack is not None
+                    and seat.starting_stack > starting_stack
+            ):
+                warn('rat-holing')
 
         return seat
 
     def can_buy_rebuy_top_off_or_rat_hole(
             self,
             user: str,
-            starting_stack: int,
+            starting_stack: int | None = None,
     ) -> bool:
         try:
             self.verify_buying_rebuying_topping_off_or_rat_holing(
