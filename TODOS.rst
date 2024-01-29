@@ -15,5 +15,4 @@ Here are some of the features that are planned to be implemented in the future.
 - Implement MTT
 - Better felt design.
 - Error messages
-- try with redis channel layer
 - autoact if sitting out!
