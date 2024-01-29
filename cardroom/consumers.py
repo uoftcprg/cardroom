@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
-from dataclasses import asdict
 
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import JsonWebsocketConsumer
 
 from cardroom.models import CashGame
 from cardroom.gamemaster import handle, get_data
+from cardroom.utilities import serialize
 
 
 class ControllerConsumer(JsonWebsocketConsumer, ABC):
@@ -28,7 +28,9 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
             self.controller.group_name,
             self.channel_name,
         )
-        self.data({'type': 'data', 'data': (get_data(self.controller),)})
+        self.data(
+            {'type': 'data!', 'data': (serialize(get_data(self.controller)),)},
+        )
 
     def disconnect(self, code):
         async_to_sync(self.channel_layer.group_discard)(
@@ -42,13 +44,19 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
             handle(self.controller, self.user, content)
 
     def data(self, event):
-        event['data'] = [
-            asdict(
-                data.get(self.user.username, data[None]),
-            ) for data in event['data']
-        ]
-
-        self.send_json(event)
+        self.send_json(
+            (
+                event
+                | {
+                    'data': [
+                        data.get(
+                            self.user.username,
+                            data[''],
+                        ) for data in event['data']
+                    ],
+                }
+            ),
+        )
 
 
 class CashGameConsumer(ControllerConsumer):

@@ -34,7 +34,7 @@ class Controller(ABC):
     """The betting timeout."""
     hole_cards_showing_or_mucking_timeout: float
     """The hole cards showing or mucking timeout."""
-    callback: Callable[[list[dict[str | None, Data]]], Any]
+    callback: Callable[[list[dict[str, Data]]], Any]
     """The callback."""
     parse_value: Callable[[str], int]
     """The value parser."""
@@ -146,7 +146,7 @@ class Controller(ABC):
                     hole_cards_showing_or_mucking_timestamp = None
 
         time_banks = dict[str, float]()
-        data = list[dict[str | None, Data]]()
+        data = list[dict[str, Data]]()
 
         while True:
             user_action = get_event()
@@ -226,7 +226,11 @@ class Controller(ABC):
                     table.destroy_state()
                     append_data()
 
-                if table.state is not None:
+                if table.state is None:
+                    standing_pat_timestamp = None
+                    betting_timestamp = None
+                    hole_cards_showing_or_mucking_timestamp = None
+                else:
                     status = True
 
                     if table.state.can_post_ante():

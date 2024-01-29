@@ -135,7 +135,7 @@ class CashGame(Controller):
     def get_data(self, user: AbstractUser) -> Data:
         data = get_data(self)
 
-        return data.get(user.username, data[None])
+        return data.get(user.username, data[''])
 
     def get_data_url(self) -> str:
         try:

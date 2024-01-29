@@ -1,4 +1,5 @@
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import asdict, is_dataclass
 from math import inf, floor
 from typing import Any, cast
 from zoneinfo import ZoneInfo
@@ -87,3 +88,16 @@ def get_felt() -> bool:
 
 def get_root_routingconf() -> Any:
     return getattr(settings, 'ROOT_ROUTINGCONF', DEFAULT_ROOT_ROUTINGCONF)
+
+
+def serialize(obj: Any) -> Any:
+    if obj is None or isinstance(obj, bytes | str | int | float | bool):
+        return obj
+    elif is_dataclass(obj):
+        return serialize(asdict(obj))
+    elif isinstance(obj, Mapping):
+        return dict(zip(serialize(obj.keys()), serialize(obj.values())))
+    elif isinstance(obj, Iterable):
+        return list(map(serialize, obj))
+    else:
+        raise AssertionError

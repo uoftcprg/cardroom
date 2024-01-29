@@ -5,8 +5,7 @@ from django.http import JsonResponse
 from django.views.generic import DetailView
 from rest_framework.viewsets import ModelViewSet
 
-from cardroom.felt import Settings, Data
-from cardroom.gamemaster import get_data
+from cardroom.felt import Settings
 from cardroom.models import CashGame, HandHistory, Poker, Table
 from cardroom.serializers import (
     CashGameSerializer,
@@ -14,6 +13,7 @@ from cardroom.serializers import (
     PokerSerializer,
     TableSerializer,
 )
+from cardroom.utilities import serialize
 
 
 class PokerViewSet(ModelViewSet):
@@ -43,9 +43,7 @@ class CashGameFeltView(DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['settings'] = asdict(Settings())
-        data = get_data(self.object)
-        data = asdict(data.get(self.request.user.username, data[None]))
-        context['data'] = data
+        context['data'] = asdict(self.object.get_data(self.request.user))
 
         return context
 
@@ -57,8 +55,7 @@ class HandHistoryFeltView(DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['settings'] = asdict(Settings())
-        data = tuple(map(asdict, Data.from_hand_history(self.object.load())))
-        context['data'] = data
+        context['data'] = serialize(self.object.data)
 
         return context
 
@@ -82,4 +79,4 @@ class HandHistoryFeltDataView(DetailView):
             context: dict[str, Any],
             **response_kwargs: Any,
     ) -> JsonResponse:
-        return JsonResponse(tuple(map(asdict, self.object.data)), safe=False)
+        return JsonResponse(serialize(self.object.data), safe=False)

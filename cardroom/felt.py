@@ -147,7 +147,7 @@ class Data:
     actor: int | None = None
 
     @classmethod
-    def from_table(cls, table: Table) -> dict[str | None, Data]:
+    def from_table(cls, table: Table) -> dict[str, Data]:
         button = None if table.button is None else table.button.seat_index
         hole_statuses = list[bool]()
 
@@ -190,7 +190,7 @@ class Data:
 
         data = {}
 
-        for user in chain(table.users, (None,)):
+        for user in chain(table.users, ('',)):
             holes = list[list[Card] | None]()
 
             for seat in table.seats:

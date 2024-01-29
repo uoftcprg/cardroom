@@ -4,6 +4,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
 from cardroom.felt import Data
+from cardroom.utilities import serialize
 
 controller_lock = Lock()
 controllers = {}
@@ -31,16 +32,16 @@ data_lock = Lock()
 data = {}
 
 
-def broadcast(model, data_):
+def broadcast(model, data_=None):
     key = model.group_name
 
-    if data_:
+    if data_ is not None and data_:
         with data_lock:
             data[key] = data_[-1]
 
         async_to_sync(get_channel_layer().group_send)(
             model.group_name,
-            {'type': 'data', 'data': data_},
+            {'type': 'data', 'data': serialize(data_)},
         )
 
 
@@ -48,4 +49,4 @@ def get_data(model):
     key = model.group_name
 
     with data_lock:
-        return data.get(key, {None: Data()})
+        return data.get(key, {'': Data()})
