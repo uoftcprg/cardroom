@@ -1,7 +1,13 @@
 from django.urls import path, URLResolver
 
+from cardroom.apps import CardroomConfig
 from cardroom.consumers import CashGameConsumer
 
-websocket_urlpatterns: list[URLResolver] = [
-    path('cash-game/<int:pk>/', CashGameConsumer.as_asgi()),
+app_name: str = CardroomConfig.name
+urlpatterns: list[URLResolver] = [
+    path(
+        'cash-games/<int:pk>/',
+        CashGameConsumer.as_asgi(),
+        name='cash-game-websocket',
+    ),
 ]

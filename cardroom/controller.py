@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from queue import Empty, Queue
 from traceback import print_exc
-from typing import Any, cast
+from typing import Any
 from warnings import warn
 from zoneinfo import ZoneInfo
 
@@ -66,17 +66,14 @@ class Controller(ABC):
             return get_now_timestamp() + timedelta(seconds=timeout)
 
         def get_auto_timestamp() -> datetime | None:
-            return cast(
-                datetime | None,
-                min_or_none(
-                    (
-                        state_construction_timestamp,
-                        state_destruction_timestamp,
-                        *idle_timestamps.values(),
-                        standing_pat_timestamp,
-                        betting_timestamp,
-                        hole_cards_showing_or_mucking_timestamp,
-                    ),
+            return min_or_none(
+                (
+                    state_construction_timestamp,
+                    state_destruction_timestamp,
+                    *idle_timestamps.values(),
+                    standing_pat_timestamp,
+                    betting_timestamp,
+                    hole_cards_showing_or_mucking_timestamp,
                 ),
             )
 

@@ -5,6 +5,7 @@ from dataclasses import fields
 from functools import partial
 from typing import ClassVar
 
+from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.urls import NoReverseMatch, reverse
@@ -13,12 +14,14 @@ from pokerkit import Automation, ValuesLike
 import pokerkit
 
 from cardroom.apps import CardroomConfig
-from cardroom.gamemaster import broadcast
+from cardroom.felt import Data
+from cardroom.gamemaster import broadcast, get_data
 from cardroom.utilities import (
     get_divmod,
-    get_parse_value,
-    get_tzinfo,
     get_felt,
+    get_parse_value,
+    get_root_routingconf,
+    get_tzinfo,
 )
 import cardroom.controller as controller
 import cardroom.table as table
@@ -129,20 +132,52 @@ class Controller(models.Model):
 class CashGame(Controller):
     table = models.ForeignKey(Table, models.PROTECT)
 
+    def get_data(self, user: AbstractUser) -> Data:
+        data = get_data(self)
+
+        return data.get(user.username, data[None])
+
+    def get_data_url(self) -> str:
+        try:
+            url = reverse(
+                f'{CardroomConfig.name}:cash-game-data',
+                kwargs={'pk': self.pk},
+            )
+        except NoReverseMatch:
+            url = reverse('cash-game-data', kwargs={'pk': self.pk})
+
+        return url
+
+    def get_websocket_url(self) -> str:
+        try:
+            url = reverse(
+                f'{CardroomConfig.name}:cash-game-websocket',
+                get_root_routingconf(),
+                kwargs={'pk': self.pk},
+            )
+        except NoReverseMatch:
+            url = reverse(
+                'cash-game-websocket',
+                get_root_routingconf(),
+                kwargs={'pk': self.pk},
+            )
+
+        return url
+
     if get_felt():
-        def get_absolute_url(
-                self,
-                namespace: str = CardroomConfig.name,
-        ) -> str:
+        def get_felt_url(self) -> str:
             try:
                 url = reverse(
-                    f'{namespace}:cash_game_felt',
+                    f'{CardroomConfig.name}:cash-game-felt',
                     kwargs={'pk': self.pk},
                 )
             except NoReverseMatch:
-                url = reverse('cash_game_felt', kwargs={'pk': self.pk})
+                url = reverse('cash-game-felt', kwargs={'pk': self.pk})
 
             return url
+
+        def get_absolute_url(self) -> str:
+            return self.get_felt_url()
 
     def load(self) -> controller.CashGame:
         return controller.CashGame(
@@ -207,20 +242,35 @@ class HandHistory(models.Model):
             else:
                 yield field.name
 
+    @property
+    def data(self) -> Iterator[Data]:
+        return Data.from_hand_history(self.load())
+
+    def get_data_url(self) -> str:
+        try:
+            url = reverse(
+                f'{CardroomConfig.name}:hand-history-data',
+                kwargs={'pk': self.pk},
+            )
+        except NoReverseMatch:
+            url = reverse('hand-history-data', kwargs={'pk': self.pk})
+
+        return url
+
     if get_felt():
-        def get_absolute_url(
-                self,
-                namespace: str = CardroomConfig.name,
-        ) -> str:
+        def get_felt_url(self) -> str:
             try:
                 url = reverse(
-                    f'{namespace}:hand_history_felt',
+                    f'{CardroomConfig.name}:hand-history-felt',
                     kwargs={'pk': self.pk},
                 )
             except NoReverseMatch:
-                url = reverse('hand_history_felt', kwargs={'pk': self.pk})
+                url = reverse('hand-history-felt', kwargs={'pk': self.pk})
 
             return url
+
+        def get_absolute_url(self) -> str:
+            return self.get_felt_url()
 
     @classmethod
     def dump(cls, hh: pokerkit.HandHistory) -> HandHistory:

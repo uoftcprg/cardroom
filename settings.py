@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'cardroom',
     'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -39,8 +40,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-
-    'cardroom',
 ]
 
 MIDDLEWARE = [
@@ -78,6 +77,8 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
+
+ROOT_ROUTINGCONF = 'cardroom.routing'
 
 
 # Database
@@ -167,10 +168,22 @@ CARDROOM_DECIMAL_PLACES = 0
 
 CARDROOM_ADMIN = True
 
+# # Disable admin urls
+#
+# CARDROOM_ADMIN = False
+
 # Enable authentation APIs
 
 CARDROOM_AUTH = True
 
+# # Disable authentation APIs
+#
+# CARDROOM_AUTH = False
+
 # Enable felt
 
 CARDROOM_FELT = True
+
+# # Disable felt
+#
+# CARDROOM_FELT = False

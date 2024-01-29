@@ -1,53 +1,53 @@
 function join_() {
-	cashGameSocket.send(JSON.stringify(`j ${jSeatIndex.value}`));
+	webSocket.send(JSON.stringify(`j ${jSeatIndex.value}`));
 
 	jSeatIndex.value = "";
 }
 
 function leave() {
-	cashGameSocket.send(JSON.stringify("l"));
+	webSocket.send(JSON.stringify("l"));
 }
 
 function sitOut() {
-	cashGameSocket.send(JSON.stringify("s"));
+	webSocket.send(JSON.stringify("s"));
 }
 
 function beBack() {
-	cashGameSocket.send(JSON.stringify("b"));
+	webSocket.send(JSON.stringify("b"));
 }
 
 function buyRebuyTopOffOrRateHole() {
-	cashGameSocket.send(JSON.stringify(`brtr ${brtrAmount.value}`));
+	webSocket.send(JSON.stringify(`brtr ${brtrAmount.value}`));
 
 	brtrAmount.value = "";
 }
 
 function standPatOrDiscard() {
-	cashGameSocket.send(JSON.stringify(`sd ${sdCards.value}`));
+	webSocket.send(JSON.stringify(`sd ${sdCards.value}`));
 
 	sdCards.value = "";
 }
 
 function fold() {
-	cashGameSocket.send(JSON.stringify("f"));
+	webSocket.send(JSON.stringify("f"));
 }
 
 function checkOrCall() {
-	cashGameSocket.send(JSON.stringify("cc"));
+	webSocket.send(JSON.stringify("cc"));
 }
 
 function postBringIn() {
-	cashGameSocket.send(JSON.stringify("pb"));
+	webSocket.send(JSON.stringify("pb"));
 }
 
 function completeBetOrRaise() {
-	cashGameSocket.send(JSON.stringify(`cbr ${cbrAmount.value}`));
+	webSocket.send(JSON.stringify(`cbr ${cbrAmount.value}`));
 
 	cbrAmount.value = "";
 }
 
 function showHoleCards() {
-	cashGameSocket.send(JSON.stringify(`sm ${smCards.value}`));
+	webSocket.send(JSON.stringify(`sm ${smCards.value}`));
 
 	smCards.value = "";
 }
@@ -73,6 +73,7 @@ const sdCards = document.getElementById("sd-cards");
 const cbrAmount = document.getElementById("cbr-amount");
 const smCards = document.getElementById("sm-cards");
 const pk = JSON.parse(document.getElementById("pk").textContent);
+const websocketURL = JSON.parse(document.getElementById("websocket_url").textContent);
 const settings = JSON.parse(document.getElementById("settings").textContent);
 let dataGuard = true;
 let data = [JSON.parse(document.getElementById("data").textContent)];
@@ -86,13 +87,13 @@ else if (location.protocol === "https:")
 else
 	protocol = "";
 
-const cashGameSocket = new WebSocket(`${protocol}//${location.host}/ws/cash-game/${pk}/`);
-cashGameSocket.onmessage = function(event) {
+const webSocket = new WebSocket(`${protocol}//${location.host}${websocketURL}`);
+webSocket.onmessage = function(event) {
 	dataGuard = true;
 
 	data.push(...JSON.parse(event.data).data);
 }
-cashGameSocket.onclose = function(event) {
+webSocket.onclose = function(event) {
 	console.error("Cash game socket closed unexpectedly");
 }
 

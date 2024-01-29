@@ -127,7 +127,7 @@ class Settings:
     spade_color: str = 'black'
     unknown_color: str = 'white'
 
-    shift_timeout: float = 0.25
+    shifter_timeout: float = 0.25
     watchdog_timeout: float = 1
 
 

@@ -66,17 +66,20 @@ class HandHistoryFeltView(DetailView):
 class CashGameFeltDataView(DetailView):
     model = CashGame
 
-    def render_to_response(self, context, **response_kwargs):
-        data = get_data(self.object)
-        data = asdict(data.get(self.request.user.username, data[None]))
-
-        return JsonResponse(data)
+    def render_to_response(
+            self,
+            context: dict[str, Any],
+            **response_kwargs: Any,
+    ) -> JsonResponse:
+        return JsonResponse(asdict(self.object.get_data(self.request.user)))
 
 
 class HandHistoryFeltDataView(DetailView):
     model = HandHistory
 
-    def render_to_response(self, context, **response_kwargs):
-        data = tuple(map(asdict, Data.from_hand_history(self.object.load())))
-
-        return JsonResponse(data, safe=False)
+    def render_to_response(
+            self,
+            context: dict[str, Any],
+            **response_kwargs: Any,
+    ) -> JsonResponse:
+        return JsonResponse(tuple(map(asdict, self.object.data)), safe=False)

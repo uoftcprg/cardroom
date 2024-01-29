@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from math import inf, floor
-from typing import cast
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 import math
 
@@ -14,6 +14,7 @@ DEFAULT_DECIMAL_PLACES: int | float = inf
 DEFAULT_ADMIN: bool = False
 DEFAULT_AUTH: bool = False
 DEFAULT_FELT: bool = False
+DEFAULT_ROOT_ROUTINGCONF: str = 'cardroom.routing'
 _divmod = divmod
 
 
@@ -59,18 +60,12 @@ def get_tzinfo() -> ZoneInfo:
 
 
 def get_divmod() -> Callable[[int, int], tuple[int, int]]:
-    return cast(
-        Callable[[int, int], tuple[int, int]],
-        import_string(getattr(settings, 'CARDROOM_DIVMOD', DEFAULT_DIVMOD)),
-    )
+    return import_string(getattr(settings, 'CARDROOM_DIVMOD', DEFAULT_DIVMOD))
 
 
 def get_parse_value() -> Callable[[str], int]:
-    return cast(
-        Callable[[str], int],
-        import_string(
-            getattr(settings, 'CARDROOM_PARSE_VALUE', DEFAULT_PARSE_VALUE),
-        ),
+    return import_string(
+        getattr(settings, 'CARDROOM_PARSE_VALUE', DEFAULT_PARSE_VALUE),
     )
 
 
@@ -88,3 +83,7 @@ def get_auth() -> bool:
 
 def get_felt() -> bool:
     return getattr(settings, 'CARDROOM_FELT', DEFAULT_FELT)
+
+
+def get_root_routingconf() -> Any:
+    return getattr(settings, 'ROOT_ROUTINGCONF', DEFAULT_ROOT_ROUTINGCONF)

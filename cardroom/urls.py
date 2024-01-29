@@ -16,12 +16,17 @@ from cardroom.views import (
 )
 
 app_name: str = CardroomConfig.name
-router = DefaultRouter()
+router: DefaultRouter = DefaultRouter()
 urlpatterns: list[URLPattern | URLResolver] = [
-    path('cash-games/<int:pk>/felt/data/', CashGameFeltDataView.as_view()),
     path(
-        'hand-histories/<int:pk>/felt/data/',
+        'cash-games/<int:pk>/data/',
+        CashGameFeltDataView.as_view(),
+        name='cash-game-data',
+    ),
+    path(
+        'hand-histories/<int:pk>/data/',
         HandHistoryFeltDataView.as_view(),
+        name='hand-history-data',
     ),
 ]
 
@@ -41,14 +46,14 @@ if get_felt():
         path(
             'cash-games/<int:pk>/felt/',
             CashGameFeltView.as_view(),
-            name='cash_game_felt',
+            name='cash-game-felt',
         ),
     )
     urlpatterns.append(
         path(
             'hand-histories/<int:pk>/felt/',
             HandHistoryFeltView.as_view(),
-            name='hand_history_felt',
+            name='hand-history-felt',
         ),
     )
 

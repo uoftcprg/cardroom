@@ -5,7 +5,6 @@ Todos
 Here are some of the features that are planned to be implemented in the future.
 
 - Prevent command: ``sm ...cards`` and only allow ``sm -`` or ``sm``
-- See why only last frame seem to be shown after each cash-game update
 - Model the per-user settings in the database
 - Add to felt data and display:
   - last update timestamp
@@ -15,3 +14,5 @@ Here are some of the features that are planned to be implemented in the future.
 - Implement sit-n-go
 - Implement MTT
 - Better felt design.
+- Error messages
+- try with redis channel layer

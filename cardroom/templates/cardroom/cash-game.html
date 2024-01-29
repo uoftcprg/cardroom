@@ -37,6 +37,7 @@
 
 {% block scripts %}
 {{ object.pk|json_script:"pk" }}
+{{ object.get_websocket_url|json_script:"websocket_url" }}
 {{ settings|json_script:"settings" }}
 {{ data|json_script:"data" }}
 <script src="{% static 'cardroom/cash-game.js' %}"></script>
