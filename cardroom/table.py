@@ -182,7 +182,27 @@ class Table:
         for seat in self.seats:
             if seat.user_status:
                 assert seat.user is not None
+
                 yield seat.user
+
+    @property
+    def acting_seat(self) -> Seat | None:
+        if self.state is not None:
+            for seat in self.seats:
+                if (
+                        seat.player_status
+                        and (
+                            (
+                                seat.player_index
+                                == self.state.stander_pat_or_discarder_index
+                            )
+                            or seat.player_index == self.state.actor_index
+                            or seat.player_index == self.state.showdown_index
+                        )
+                ):
+                    return seat
+
+        return None
 
     def get_seat(self, user: str) -> Seat:
         for seat in self.seats:

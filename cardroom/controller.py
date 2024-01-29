@@ -231,6 +231,25 @@ class Controller(ABC):
                     betting_timestamp = None
                     hole_cards_showing_or_mucking_timestamp = None
                 else:
+                    if (
+                            table.acting_seat is not None
+                            and not table.acting_seat.active_status
+                    ):
+                        if table.state.can_stand_pat_or_discard():
+                            table.state.stand_pat_or_discard()
+                        elif table.state.can_post_bring_in():
+                            table.state.post_bring_in()
+                        elif table.state.can_fold():
+                            table.state.fold()
+                        elif table.state.can_check_or_call():
+                            table.state.check_or_call()
+                        elif table.state.can_show_or_muck_hole_cards():
+                            table.state.show_or_muck_hole_cards()
+                        else:
+                            raise AssertionError
+
+                        append_data()
+
                     status = True
 
                     if table.state.can_post_ante():
