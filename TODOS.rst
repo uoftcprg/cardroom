@@ -14,4 +14,3 @@ Here are some of the features that are planned to be implemented in the future.
 - different color username for active/inactive
 - save played hands
 - docs
-- squash migrations
