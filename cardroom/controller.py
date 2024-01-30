@@ -156,6 +156,10 @@ class Controller(ABC):
         data = list[dict[str, Data]]()
         user_error = None
 
+        append_data()
+        self.callback(data, user_error)
+        data.clear()
+
         while True:
             user_action = get_event()
 

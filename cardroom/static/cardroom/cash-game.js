@@ -82,8 +82,8 @@ function updateActions() {
 	else
 		jSeatIndex.value = subData["join"].join(", ");
 
-	// jButton.disabled = subData["join"] === null;
-	// jSeatIndex.disabled = subData["join"] === null;
+	jButton.disabled = subData["join"] === null;
+	jSeatIndex.disabled = subData["join"] === null;
 	lButton.innerText = "Leave";
 	lButton.disabled = !subData["leave"];
 	sButton.innerText = "Sit out";

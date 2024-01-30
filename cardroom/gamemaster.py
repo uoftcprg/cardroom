@@ -3,7 +3,6 @@ from threading import Thread, Lock
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from cardroom.felt import Data
 from cardroom.utilities import serialize
 
 controller_lock = Lock()
@@ -11,17 +10,19 @@ controllers = {}
 threads = {}
 
 
+def set_controller(model):
+    controllers[model.group_name] = model.load()
+    threads[model.group_name] = Thread(
+        target=controllers[model.group_name].mainloop,
+        daemon=True,
+    )
+
+    threads[model.group_name].start()
+
+
 def get_controller(model):
-    key = model.group_name
-
     with controller_lock:
-        if key not in controllers:
-            controllers[key] = model.load()
-            threads[key] = Thread(target=controllers[key].mainloop)
-
-            threads[key].start()
-
-        return controllers[key]
+        return controllers[model.group_name]
 
 
 def handle(model, user, content):
@@ -33,11 +34,9 @@ data = {}
 
 
 def broadcast(model, data_, user_message):
-    key = model.group_name
-
     if data_ is not None and data_:
         with data_lock:
-            data[key] = data_[-1]
+            data[model.group_name] = data_[-1]
 
         async_to_sync(get_channel_layer().group_send)(
             model.group_name,
@@ -54,7 +53,5 @@ def broadcast(model, data_, user_message):
 
 
 def get_data(model):
-    key = model.group_name
-
     with data_lock:
-        return data.get(key, {'': Data()})
+        return data[model.group_name]

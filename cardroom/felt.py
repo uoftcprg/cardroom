@@ -271,6 +271,7 @@ class Data:
                     complete_bet_or_raise_to = (
                         (
                             table.state.street_index == 0
+                            and table.state.bring_in > 0
                             and (
                                 CompletionBettingOrRaisingTo
                                 not in set(map(type, table.state.operations))
