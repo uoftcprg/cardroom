@@ -9,12 +9,15 @@ from django.conf import settings
 from django.utils.module_loading import import_string
 import pokerkit
 
+from cardroom.felt import Configuration
+
 DEFAULT_DIVMOD: str = 'cardroom.utilities.divmod'
 DEFAULT_PARSE_VALUE: str = 'cardroom.utilities.parse_value'
 DEFAULT_DECIMAL_PLACES: int | float = inf
 DEFAULT_ADMIN: bool = False
 DEFAULT_AUTH: bool = False
 DEFAULT_FELT: bool = False
+DEFAULT_CONFIGURATION: Configuration = Configuration()
 DEFAULT_ROOT_ROUTINGCONF: str = 'cardroom.routing'
 _divmod = divmod
 
@@ -84,6 +87,10 @@ def get_auth() -> bool:
 
 def get_felt() -> bool:
     return getattr(settings, 'CARDROOM_FELT', DEFAULT_FELT)
+
+
+def get_configuration() -> Configuration:
+    return getattr(settings, 'CARDROOM_CONFIGURATION', DEFAULT_CONFIGURATION)
 
 
 def get_root_routingconf() -> Any:

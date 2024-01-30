@@ -187,3 +187,9 @@ CARDROOM_FELT = True
 # # Disable felt
 #
 # CARDROOM_FELT = False
+
+# # Configuration
+#
+# from cardroom.felt import Configuration
+#
+# CARDROOM_CONFIGURATION = Configuration(...)

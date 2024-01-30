@@ -22,12 +22,11 @@ class Felt {
 		"?": "unknown_color",
 	};
 
-	constructor(width, height, frameRate, canvas, settings, dataGetter) {
+	constructor(width, height, canvas, configuration, dataGetter) {
 		this.width = width;
 		this.height = height;
-		this.frameRate = frameRate;
 		this.canvas = canvas;
-		this.settings = settings;
+		this.configuration = configuration;
 		this.dataGetter = dataGetter;
 	}
 
@@ -61,7 +60,7 @@ class Felt {
 
 	setup() {
 		createCanvas(this.width, this.height, canvas);
-		frameRate(this.frameRate);
+		frameRate(configuration["frame_rate"]);
 		textAlign(CENTER, CENTER);
 		textureMode(NORMAL);
 		rectMode(CENTER);
@@ -76,7 +75,7 @@ class Felt {
 		translate(width / 2, height / 2);
 		scale(min(width, height), -min(width, height));
 
-		background(settings["background_color"]);
+		background(configuration["background_color"]);
 		this.drawTable(data);
 
 		for (let i = 0; i < data["names"].length; ++i)
@@ -88,48 +87,48 @@ class Felt {
 	drawTable(data) {
 		push();
 
-		translate(settings["table_x"], settings["table_y"]);
+		translate(configuration["table_x"], configuration["table_y"]);
 
 		push();
-		fill(settings["table_border_color"]);
-		stroke(settings["table_border_color"]);
+		fill(configuration["table_border_color"]);
+		stroke(configuration["table_border_color"]);
 		strokeWeight(0);
-		ellipse(0, 0, settings["table_outer_width"], settings["table_outer_height"]);
+		ellipse(0, 0, configuration["table_outer_width"], configuration["table_outer_height"]);
 		pop();
 
 		push();
-		fill(settings["table_felt_color"]);
-		stroke(settings["table_felt_color"]);
+		fill(configuration["table_felt_color"]);
+		stroke(configuration["table_felt_color"]);
 		strokeWeight(0);
-		ellipse(0, 0, settings["table_inner_width"], settings["table_inner_height"]);
+		ellipse(0, 0, configuration["table_inner_width"], configuration["table_inner_height"]);
 		pop();
 
 		pop();
 
 		push();
 
-		translate(settings["board_x"], settings["board_y"]);
+		translate(configuration["board_x"], configuration["board_y"]);
 
 		push();
-		fill(settings["board_color"]);
-		stroke(settings["board_color"]);
+		fill(configuration["board_color"]);
+		stroke(configuration["board_color"]);
 		strokeWeight(0);
-		rect(0, 0, settings["board_width"], settings["board_height"], settings["board_radius"]);
+		rect(0, 0, configuration["board_width"], configuration["board_height"], configuration["board_radius"]);
 		pop();
 
 		push();
-		fill(settings["board_pot_text_color"]);
-		stroke(settings["board_pot_text_color"]);
+		fill(configuration["board_pot_text_color"]);
+		stroke(configuration["board_pot_text_color"]);
 		strokeWeight(0);
-		textStyle(settings["board_pot_text_style"]);
-		textFont(settings["board_pot_text_font"], settings["board_pot_text_size"]);
-		this.text(settings["board_pot_text"] + data["pots"].join(", "), 0, 0);
+		textStyle(configuration["board_pot_text_style"]);
+		textFont(configuration["board_pot_text_font"], configuration["board_pot_text_size"]);
+		this.text(configuration["board_pot_text"] + data["pots"].join(", "), 0, 0);
 		pop();
 
 		if (data["board_count"] > 0) {
-			const boardCardWidth = (settings["board_width"] - 2 * settings["board_radius"] - (data["board_count"] - 1) * settings["board_card_margin"]) / data["board_count"];
-			let boardCardX = -settings["board_width"] / 2 + settings["board_radius"] + boardCardWidth / 2;
-			const boardCardY = settings["board_height"] / 2 + settings["board_card_height"] / 2 + settings["board_card_margin"];
+			const boardCardWidth = (configuration["board_width"] - 2 * configuration["board_radius"] - (data["board_count"] - 1) * configuration["board_card_margin"]) / data["board_count"];
+			let boardCardX = -configuration["board_width"] / 2 + configuration["board_radius"] + boardCardWidth / 2;
+			const boardCardY = configuration["board_height"] / 2 + configuration["board_card_height"] / 2 + configuration["board_card_margin"];
 
 			for (const card of data["board"]) {
 				push();
@@ -137,24 +136,24 @@ class Felt {
 				translate(boardCardX, boardCardY);
 
 				push();
-				fill(settings["board_card_color"]);
-				stroke(settings["board_card_color"]);
+				fill(configuration["board_card_color"]);
+				stroke(configuration["board_card_color"]);
 				strokeWeight(0);
-				rect(0, 0, boardCardWidth, settings["board_card_height"], settings["board_card_radius"]);
+				rect(0, 0, boardCardWidth, configuration["board_card_height"], configuration["board_card_radius"]);
 				pop();
 
 				push();
-				fill(settings[Felt.suitColorKeys[card["suit"]]]);
-				stroke(settings[Felt.suitColorKeys[card["suit"]]]);
+				fill(configuration[Felt.suitColorKeys[card["suit"]]]);
+				stroke(configuration[Felt.suitColorKeys[card["suit"]]]);
 				strokeWeight(0);
-				textStyle(settings["board_card_text_style"]);
-				textFont(settings["board_card_text_font"], settings["board_card_text_size"]);
+				textStyle(configuration["board_card_text_style"]);
+				textFont(configuration["board_card_text_font"], configuration["board_card_text_size"]);
 				this.text(card["rank"] + Felt.suitChars[card["suit"]], 0, 0);
 				pop();
 
 				pop();
 
-				boardCardX += boardCardWidth + settings["board_card_margin"];
+				boardCardX += boardCardWidth + configuration["board_card_margin"];
 			}
 		}
 
@@ -166,57 +165,57 @@ class Felt {
 
 		push();
 
-		translate(settings["table_x"], settings["table_y"]);
+		translate(configuration["table_x"], configuration["table_y"]);
 
 		if (data["button"] === index) {
-			let point = this.getPointOnEllipse(0, 0, settings["button_ring_width"], settings["button_ring_height"], angle + settings["button_angle"]);
+			let point = this.getPointOnEllipse(0, 0, configuration["button_ring_width"], configuration["button_ring_height"], angle + configuration["button_angle"]);
 
 			push();
 
 			translate(point.x, point.y);
 
 			push();
-			fill(settings["button_color"]);
-			stroke(settings["button_color"]);
+			fill(configuration["button_color"]);
+			stroke(configuration["button_color"]);
 			strokeWeight(0);
-			circle(0, 0, settings["button_diameter"]);
+			circle(0, 0, configuration["button_diameter"]);
 			pop();
 
 			push();
-			fill(settings["button_text_color"]);
-			stroke(settings["button_text_color"]);
+			fill(configuration["button_text_color"]);
+			stroke(configuration["button_text_color"]);
 			strokeWeight(0);
-			textStyle(settings["button_text_style"]);
-			textFont(settings["button_text_font"], settings["button_text_size"]);
-			this.text(settings["button_text"], 0, 0);
+			textStyle(configuration["button_text_style"]);
+			textFont(configuration["button_text_font"], configuration["button_text_size"]);
+			this.text(configuration["button_text"], 0, 0);
 			pop();
 
 			pop();
 		}
 
 		if (data["bets"][index] !== null && data["bets"][index] !== 0) {
-			let point = this.getPointOnEllipse(0, 0, settings["bet_ring_width"], settings["bet_ring_height"], angle + settings["bet_angle"]);
+			let point = this.getPointOnEllipse(0, 0, configuration["bet_ring_width"], configuration["bet_ring_height"], angle + configuration["bet_angle"]);
 
 			push();
 
 			translate(point.x, point.y);
 
-			textStyle(settings["bet_text_style"]);
-			textFont(settings["bet_text_font"], settings["bet_text_size"]);
+			textStyle(configuration["bet_text_style"]);
+			textFont(configuration["bet_text_font"], configuration["bet_text_size"]);
 
 			const betText = data["bets"][index];
-			const betBoxWidth = textWidth(betText) + settings["bet_box_x_padding"];
+			const betBoxWidth = textWidth(betText) + configuration["bet_box_x_padding"];
 
 			push();
-			fill(settings["bet_box_color"]);
-			stroke(settings["bet_box_color"]);
+			fill(configuration["bet_box_color"]);
+			stroke(configuration["bet_box_color"]);
 			strokeWeight(0);
-			rect(0, 0, betBoxWidth, settings["bet_box_height"], settings["bet_box_radius"]);
+			rect(0, 0, betBoxWidth, configuration["bet_box_height"], configuration["bet_box_radius"]);
 			pop();
 
 			push();
-			fill(settings["bet_text_color"]);
-			stroke(settings["bet_text_color"]);
+			fill(configuration["bet_text_color"]);
+			stroke(configuration["bet_text_color"]);
 			strokeWeight(0);
 			this.text(betText, 0, 0);
 			pop();
@@ -224,7 +223,7 @@ class Felt {
 			pop();
 		}
 
-		let point = this.getPointOnEllipse(0, 0, settings["seat_ring_width"], settings["seat_ring_height"], angle + settings["seat_angle"]);
+		let point = this.getPointOnEllipse(0, 0, configuration["seat_ring_width"], configuration["seat_ring_height"], angle + configuration["seat_angle"]);
 
 		push();
 
@@ -233,21 +232,21 @@ class Felt {
 		if (data["holes"][index] !== null) {
 			push();
 
-			translate(settings["hole_x"], settings["hole_y"]);
+			translate(configuration["hole_x"], configuration["hole_y"]);
 
 			push();
-			fill(settings["hole_color"]);
-			stroke(settings["hole_color"]);
+			fill(configuration["hole_color"]);
+			stroke(configuration["hole_color"]);
 			strokeWeight(0);
-			rect(0, 0, settings["hole_width"], settings["hole_height"], settings["hole_radius"]);
+			rect(0, 0, configuration["hole_width"], configuration["hole_height"], configuration["hole_radius"]);
 			pop();
 
 			let cardCount = data["hole_statuses"].reduce((a, b) => a + b, 0);
 			cardCount = Math.max(cardCount, data["hole_statuses"].length - cardCount);
-			const holeCardWidth = (settings["hole_width"] - 2 * settings["hole_radius"] - (cardCount - 1) * settings["hole_card_margin"]) / cardCount;
-			const initialHoleCardX = -settings["hole_width"] / 2 + settings["hole_radius"] + holeCardWidth / 2;
+			const holeCardWidth = (configuration["hole_width"] - 2 * configuration["hole_radius"] - (cardCount - 1) * configuration["hole_card_margin"]) / cardCount;
+			const initialHoleCardX = -configuration["hole_width"] / 2 + configuration["hole_radius"] + holeCardWidth / 2;
 			let holeCardX = initialHoleCardX;
-			let holeCardY = settings["hole_height"] / 2 + settings["hole_card_height"] / 2 + settings["hole_card_margin"];
+			let holeCardY = configuration["hole_height"] / 2 + configuration["hole_card_height"] / 2 + configuration["hole_card_margin"];
 
 			for (const status_ of [false, true]) {
 				for (let i = 0; i < data["holes"][index].length; ++i) {
@@ -261,28 +260,28 @@ class Felt {
 					translate(holeCardX, holeCardY);
 
 					push();
-					fill(settings["hole_card_color"]);
-					stroke(settings["hole_card_color"]);
+					fill(configuration["hole_card_color"]);
+					stroke(configuration["hole_card_color"]);
 					strokeWeight(0);
-					rect(0, 0, holeCardWidth, settings["hole_card_height"], settings["hole_card_radius"]);
+					rect(0, 0, holeCardWidth, configuration["hole_card_height"], configuration["hole_card_radius"]);
 					pop();
 
 					push();
-					fill(settings[Felt.suitColorKeys[card["suit"]]]);
-					stroke(settings[Felt.suitColorKeys[card["suit"]]]);
+					fill(configuration[Felt.suitColorKeys[card["suit"]]]);
+					stroke(configuration[Felt.suitColorKeys[card["suit"]]]);
 					strokeWeight(0);
-					textStyle(settings["hole_card_text_style"]);
-					textFont(settings["hole_card_text_font"], settings["hole_card_text_size"]);
+					textStyle(configuration["hole_card_text_style"]);
+					textFont(configuration["hole_card_text_font"], configuration["hole_card_text_size"]);
 					this.text(card["rank"] + Felt.suitChars[card["suit"]], 0, 0);
 					pop();
 
 					pop();
 
-					holeCardX += holeCardWidth + settings["hole_card_margin"];
+					holeCardX += holeCardWidth + configuration["hole_card_margin"];
 				}
 
 				holeCardX = initialHoleCardX;
-				holeCardY += settings["hole_card_height"] + settings["hole_card_margin"];
+				holeCardY += configuration["hole_card_height"] + configuration["hole_card_margin"];
 			}
 
 			pop();
@@ -291,21 +290,21 @@ class Felt {
 		if (data["names"][index] !== null) {
 			push();
 
-			translate(settings["name_x"], settings["name_y"]);
+			translate(configuration["name_x"], configuration["name_y"]);
 
 			push();
-			fill(settings["name_box_color"]);
-			stroke(settings["name_box_color"]);
+			fill(configuration["name_box_color"]);
+			stroke(configuration["name_box_color"]);
 			strokeWeight(0);
-			rect(0, 0, settings["name_box_width"], settings["name_box_height"], settings["name_box_radius"]);
+			rect(0, 0, configuration["name_box_width"], configuration["name_box_height"], configuration["name_box_radius"]);
 			pop();
 
 			push();
-			fill(settings["name_text_color"]);
-			stroke(settings["name_text_color"]);
+			fill(configuration["name_text_color"]);
+			stroke(configuration["name_text_color"]);
 			strokeWeight(0);
-			textStyle(settings["name_text_style"]);
-			textFont(settings["name_text_font"], settings["name_text_size"]);
+			textStyle(configuration["name_text_style"]);
+			textFont(configuration["name_text_font"], configuration["name_text_size"]);
 			this.text(data["names"][index], 0, 0);
 			pop();
 
@@ -315,21 +314,21 @@ class Felt {
 		if (data["stacks"][index] !== null) {
 			push();
 
-			translate(settings["stack_x"], settings["stack_y"]);
+			translate(configuration["stack_x"], configuration["stack_y"]);
 
 			push();
-			fill(settings["stack_box_color"]);
-			stroke(settings["stack_box_color"]);
+			fill(configuration["stack_box_color"]);
+			stroke(configuration["stack_box_color"]);
 			strokeWeight(0);
-			rect(0, 0, settings["stack_box_width"], settings["stack_box_height"], settings["stack_box_radius"]);
+			rect(0, 0, configuration["stack_box_width"], configuration["stack_box_height"], configuration["stack_box_radius"]);
 			pop();
 
 			push();
-			fill(settings["stack_text_color"]);
-			stroke(settings["stack_text_color"]);
+			fill(configuration["stack_text_color"]);
+			stroke(configuration["stack_text_color"]);
 			strokeWeight(0);
-			textStyle(settings["stack_text_style"]);
-			textFont(settings["stack_text_font"], settings["stack_text_size"]);
+			textStyle(configuration["stack_text_style"]);
+			textFont(configuration["stack_text_font"], configuration["stack_text_size"]);
 			this.text(data["stacks"][index], 0, 0);
 			pop();
 
@@ -339,21 +338,21 @@ class Felt {
 		if (data["previous_action"] !== null && data["previous_action"][0] === index) {
 			push();
 
-			translate(settings["previous_action_x"], settings["previous_action_y"]);
+			translate(configuration["previous_action_x"], configuration["previous_action_y"]);
 
 			push();
-			fill(settings["previous_action_box_color"]);
-			stroke(settings["previous_action_box_color"]);
+			fill(configuration["previous_action_box_color"]);
+			stroke(configuration["previous_action_box_color"]);
 			strokeWeight(0);
-			rect(0, 0, settings["previous_action_box_width"], settings["previous_action_box_height"], settings["previous_action_box_radius"]);
+			rect(0, 0, configuration["previous_action_box_width"], configuration["previous_action_box_height"], configuration["previous_action_box_radius"]);
 			pop();
 
 			push();
-			fill(settings["previous_action_text_color"]);
-			stroke(settings["previous_action_text_color"]);
+			fill(configuration["previous_action_text_color"]);
+			stroke(configuration["previous_action_text_color"]);
 			strokeWeight(0);
-			textStyle(settings["previous_action_text_style"]);
-			textFont(settings["previous_action_text_font"], settings["previous_action_text_size"]);
+			textStyle(configuration["previous_action_text_style"]);
+			textFont(configuration["previous_action_text_font"], configuration["previous_action_text_size"]);
 			this.text(data["previous_action"][1], 0, 0);
 			pop();
 

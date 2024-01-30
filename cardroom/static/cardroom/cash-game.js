@@ -168,10 +168,10 @@ const smButton = document.getElementById("sm");
 const smCards = document.getElementById("sm-cards");
 const pk = JSON.parse(document.getElementById("pk").textContent);
 const websocketURL = JSON.parse(document.getElementById("websocket_url").textContent);
-const settings = JSON.parse(document.getElementById("settings").textContent);
+const configuration = JSON.parse(document.getElementById("configuration").textContent);
 let dataGuard = true;
 let data = [JSON.parse(document.getElementById("data").textContent)];
-const felt = new Felt(canvas.width, canvas.height, 1000, canvas, settings, getData);
+const felt = new Felt(canvas.width, canvas.height, canvas, configuration, getData);
 let protocol;
 
 if (location.protocol === "http:")
@@ -203,6 +203,6 @@ webSocket.onclose = function(event) {
 	console.error("Cash game socket closed unexpectedly");
 }
 
-setInterval(shifter, settings["shifter_timeout"] * 1000);
-setInterval(watchdog, settings["watchdog_timeout"] * 1000);
+setInterval(shifter, configuration["shifter_timeout"] * 1000);
+setInterval(watchdog, configuration["watchdog_timeout"] * 1000);
 updateActions();

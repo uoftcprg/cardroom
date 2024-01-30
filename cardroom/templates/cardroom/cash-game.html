@@ -1,4 +1,4 @@
-{% extends 'cardroom/includes/felt.html' %}
+{% extends 'cardroom/felt.html' %}
 
 {% load static %}
 
@@ -38,7 +38,7 @@
 {% block scripts %}
 {{ object.pk|json_script:"pk" }}
 {{ object.get_websocket_url|json_script:"websocket_url" }}
-{{ settings|json_script:"settings" }}
+{{ configuration|json_script:"configuration" }}
 {{ data|json_script:"data" }}
 <script src="{% static 'cardroom/cash-game.js' %}"></script>
 {% endblock %}

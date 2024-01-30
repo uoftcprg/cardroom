@@ -135,6 +135,13 @@ class Controller(ABC):
                     if table.state is None:
                         raise ValueError('state dne')
 
+                    if 'sm' in (tokens := action.split()):
+                        if '#' in tokens:
+                            tokens = tokens[:tokens.index('#')]
+
+                        if tokens != ['sm'] or tokens != ['sm', '-']:
+                            raise ValueError('explicit showdown is forbidden')
+
                     parse_action(
                         table.state,
                         f'{player} {action}',

@@ -313,17 +313,21 @@ class Table:
 
     # player management
 
-    def verify_joining(self, user: str, seat_index: int) -> None:
+    def verify_joining(self, user: str, seat_index: int | None = None) -> None:
         for seat in self.seats:
             if seat.user == user:
                 raise ValueError('user already joined')
 
-        if seat_index not in self.seat_indices:
-            raise ValueError('invalid seat index')
-        elif self.seats[seat_index].user_status:
-            raise ValueError('seat occupied')
+        if seat_index is None:
+            if len(tuple(self.users)) == self.seat_count:
+                raise ValueError('full table')
+        else:
+            if seat_index not in self.seat_indices:
+                raise ValueError('invalid seat index')
+            elif self.seats[seat_index].user_status:
+                raise ValueError('seat occupied')
 
-    def can_join(self, user: str, seat_index: int) -> bool:
+    def can_join(self, user: str, seat_index: int | None = None) -> bool:
         try:
             self.verify_joining(user, seat_index)
         except ValueError:

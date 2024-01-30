@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field, KW_ONLY
+from functools import partial
 from itertools import chain
 from math import pi
 from typing import overload, TypeVar
@@ -14,7 +15,7 @@ _T = TypeVar('_T')
 
 
 @dataclass
-class Settings:
+class Configuration:
     _: KW_ONLY
 
     background_color: str = 'gray'
@@ -130,6 +131,8 @@ class Settings:
     shifter_timeout: float = 0.25
     watchdog_timeout: float = 1
 
+    frame_rate: float = 1000
+
 
 @dataclass
 class Data:
@@ -203,9 +206,12 @@ class Data:
 
         for user in chain(table.users, ('',)):
             holes = list[list[Card] | None]()
-            join = [i for i in table.seat_indices if table.can_join(user, i)]
 
-            if not join:
+            if table.can_join(user):
+                join = list(
+                    filter(partial(table.can_join, user), table.seat_indices),
+                )
+            else:
                 join = None
 
             leave = table.can_leave(user)
