@@ -96,6 +96,11 @@ class Controller(ABC):
         def append_data() -> None:
             data.append(Data.from_table(table))
 
+        def get_time_bank(user: str) -> float:
+            time_banks.setdefault(user, self.time_bank)
+
+            return time_banks[user]
+
         state_construction_timestamp = None
         state_destruction_timestamp = None
         idle_timestamps = dict[str, datetime | None]()
@@ -237,6 +242,12 @@ class Controller(ABC):
                     )
 
                 if status and table.can_destroy_state():
+                    for key, value in time_banks.items():
+                        time_banks[key] = min(
+                            self.time_bank,
+                            value + self.time_bank_increment,
+                        )
+
                     table.destroy_state()
                     append_data()
 
