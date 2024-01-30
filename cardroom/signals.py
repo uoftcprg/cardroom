@@ -6,13 +6,10 @@ from cardroom.models import CashGame
 
 
 @receiver(post_save, sender=CashGame)
-def cash_game_post_save(
+def set_cash_game_controller(
         sender,
-        instance,
-        created,
-        raw,
-        using,
-        update_fields,
+        instance=None,
+        created=False,
         **kwargs,
 ):
     set_controller(instance)

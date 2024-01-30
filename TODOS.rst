@@ -12,7 +12,6 @@ Here are some of the features that are planned to be implemented in the future.
 - After awhile, instantly timeout... why?
 - show action
 - different color username for active/inactive
-- tokenized login
 - save played hands
 - docs
 - squash migrations
