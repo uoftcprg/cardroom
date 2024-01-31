@@ -1,4 +1,5 @@
 from django.apps import AppConfig
+from django.db import OperationalError
 
 
 class CardroomConfig(AppConfig):
@@ -11,5 +12,10 @@ class CardroomConfig(AppConfig):
 
         __import__('cardroom.signals')
 
-        for cash_game in CashGame.objects.all():
+        try:
+            cash_games = list(CashGame.objects.all())
+        except OperationalError:
+            cash_games = []
+
+        for cash_game in cash_games:
             set_controller(cash_game)
