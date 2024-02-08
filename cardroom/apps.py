@@ -1,5 +1,5 @@
 from django.apps import AppConfig
-from django.db import OperationalError
+from django.db import OperationalError, ProgrammingError
 
 
 class CardroomConfig(AppConfig):
@@ -14,7 +14,7 @@ class CardroomConfig(AppConfig):
 
         try:
             cash_games = list(CashGame.objects.all())
-        except OperationalError:
+        except (OperationalError, ProgrammingError):
             cash_games = []
 
         for cash_game in cash_games:
