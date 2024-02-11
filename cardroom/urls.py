@@ -4,7 +4,7 @@ from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework.routers import DefaultRouter
 
 from cardroom.apps import CardroomConfig
-from cardroom.utilities import get_admin, get_felt
+from cardroom.utilities import get_admin, get_auth, get_felt
 from cardroom.views import (
     CashGameFeltView,
     CashGameFrameView,
@@ -29,14 +29,16 @@ urlpatterns: list[URLPattern | URLResolver] = [
         HandHistoryFramesView.as_view(),
         name='handhistory_frames',
     ),
-    path('auth/', include('rest_framework.urls')),
-    path('token-auth/', obtain_auth_token),
 ]
 
 router.register('poker', PokerViewSet)
 router.register('tables', TableViewSet)
 router.register('cash-games', CashGameViewSet)
 router.register('hand-histories', HandHistoryViewSet)
+
+if get_auth():
+    urlpatterns.append(path('auth/', include('rest_framework.urls')))
+    urlpatterns.append(path('token-auth/', obtain_auth_token))
 
 if get_admin():
     urlpatterns.append(path('admin/', admin.site.urls))

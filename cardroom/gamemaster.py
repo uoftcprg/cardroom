@@ -43,7 +43,7 @@ def broadcast(model, sub_frames, users_message):
             {'type': 'update', 'frames': serialize(sub_frames)},
         )
 
-    if users_message is not None:
+    if all(users_message):
         users, message = users_message
 
         async_to_sync(get_channel_layer().group_send)(

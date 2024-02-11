@@ -34,7 +34,7 @@ class Controller(ABC):
     """The betting timeout."""
     hole_cards_showing_or_mucking_timeout: float
     """The hole cards showing or mucking timeout."""
-    callback: Callable[[list[dict[str, Frame]], tuple[list[str], str] | None], Any]
+    callback: Callable[[list[dict[str, Frame]], tuple[list[str], str]], Any]
     """The callback."""
     parse_value: Callable[[str], int]
     """The value parser."""
@@ -159,7 +159,7 @@ class Controller(ABC):
 
         time_banks = dict[str, float]()
         frames = list[dict[str, Frame]]()
-        users_message = None
+        users_message = list[str](), ''
 
         append_frames()
         self.callback(frames, users_message)
@@ -364,7 +364,7 @@ class Controller(ABC):
                 self.callback(frames, users_message)
 
             frames.clear()
-            users_message = None
+            users_message = [], ''
 
 
 @dataclass

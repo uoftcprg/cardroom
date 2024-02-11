@@ -166,6 +166,14 @@ CARDROOM_DECIMAL_PLACES = 0
 #
 # CARDROOM_DECIMAL_PLACES = 2
 
+# Enable authentation APIs
+
+CARDROOM_AUTH = True
+
+# # Disable authentation APIs
+#
+# CARDROOM_AUTH = False
+
 # Enable admin urls
 
 CARDROOM_ADMIN = True

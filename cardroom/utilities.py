@@ -14,6 +14,7 @@ from cardroom.felt import Configuration
 DEFAULT_DIVMOD: str = 'cardroom.utilities.divmod'
 DEFAULT_PARSE_VALUE: str = 'cardroom.utilities.parse_value'
 DEFAULT_DECIMAL_PLACES: int | float = inf
+DEFAULT_AUTH: bool = False
 DEFAULT_ADMIN: bool = False
 DEFAULT_FELT: bool = False
 DEFAULT_CONFIGURATION: Configuration = Configuration(
@@ -177,6 +178,10 @@ def get_parse_value() -> Callable[[str], int]:
 
 def get_decimal_places() -> int | float:
     return getattr(settings, 'CARDROOM_DECIMAL_PLACES', DEFAULT_DECIMAL_PLACES)
+
+
+def get_auth() -> bool:
+    return getattr(settings, 'CARDROOM_AUTH', DEFAULT_AUTH)
 
 
 def get_admin() -> bool:
