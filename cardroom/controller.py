@@ -34,7 +34,7 @@ class Controller(ABC):
     """The betting timeout."""
     hole_cards_showing_or_mucking_timeout: float
     """The hole cards showing or mucking timeout."""
-    callback: Callable[[list[dict[str, Frame]], tuple[str, str] | None], Any]
+    callback: Callable[[list[dict[str, Frame]], tuple[list[str], str] | None], Any]
     """The callback."""
     parse_value: Callable[[str], int]
     """The value parser."""

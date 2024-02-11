@@ -9,7 +9,6 @@ _divmod = divmod
 from cardroom.utilities import (  # noqa: E402
     divmod,
     get_admin,
-    get_auth,
     get_decimal_places,
     get_divmod,
     get_felt,
@@ -78,7 +77,6 @@ class UtilitiesTestCase(SimpleTestCase):
             CARDROOM_PARSE_VALUE='builtins.int',
             CARDROOM_DECIMAL_PLACES=0,
             CARDROOM_ADMIN=True,
-            CARDROOM_AUTH=True,
             CARDROOM_FELT=True,
     )
     def test_non_defaults_0(self) -> None:
@@ -86,7 +84,6 @@ class UtilitiesTestCase(SimpleTestCase):
         self.assertIs(get_parse_value(), int)
         self.assertEqual(get_decimal_places(), 0)
         self.assertTrue(get_admin())
-        self.assertTrue(get_auth())
         self.assertTrue(get_felt())
 
     @override_settings(
@@ -94,7 +91,6 @@ class UtilitiesTestCase(SimpleTestCase):
             CARDROOM_PARSE_VALUE='cardroom.utilities.parse_value',
             CARDROOM_DECIMAL_PLACES=2,
             CARDROOM_ADMIN=False,
-            CARDROOM_AUTH=False,
             CARDROOM_FELT=False,
     )
     def test_non_defaults_1(self) -> None:
@@ -102,7 +98,6 @@ class UtilitiesTestCase(SimpleTestCase):
         self.assertIs(get_parse_value(), parse_value)
         self.assertEqual(get_decimal_places(), 2)
         self.assertFalse(get_admin())
-        self.assertFalse(get_auth())
         self.assertFalse(get_felt())
 
     @override_settings()
@@ -111,12 +106,10 @@ class UtilitiesTestCase(SimpleTestCase):
         del settings.CARDROOM_PARSE_VALUE
         del settings.CARDROOM_DECIMAL_PLACES
         del settings.CARDROOM_ADMIN
-        del settings.CARDROOM_AUTH
         del settings.CARDROOM_FELT
 
         self.assertIs(get_divmod(), divmod)
         self.assertIs(get_parse_value(), parse_value)
         self.assertEqual(get_decimal_places(), inf)
         self.assertFalse(get_admin())
-        self.assertFalse(get_auth())
         self.assertFalse(get_felt())
