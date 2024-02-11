@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 from pokerkit import min_or_none, parse_action
 
-from cardroom.felt import Data
+from cardroom.felt import Frame
 from cardroom.table import Table
 
 
@@ -34,7 +34,7 @@ class Controller(ABC):
     """The betting timeout."""
     hole_cards_showing_or_mucking_timeout: float
     """The hole cards showing or mucking timeout."""
-    callback: Callable[[list[dict[str, Data]], tuple[str, str] | None], Any]
+    callback: Callable[[list[dict[str, Frame]], tuple[str, str] | None], Any]
     """The callback."""
     parse_value: Callable[[str], int]
     """The value parser."""
@@ -93,8 +93,8 @@ class Controller(ABC):
 
             return event
 
-        def append_data() -> None:
-            data.append(Data.from_table(table))
+        def append_frames() -> None:
+            frames.append(Frame.from_table(table))
 
         def get_time_bank(user: str) -> float:
             time_banks.setdefault(user, self.time_bank)
@@ -158,12 +158,12 @@ class Controller(ABC):
                     hole_cards_showing_or_mucking_timestamp = None
 
         time_banks = dict[str, float]()
-        data = list[dict[str, Data]]()
-        user_error = None
+        frames = list[dict[str, Frame]]()
+        users_message = None
 
-        append_data()
-        self.callback(data, user_error)
-        data.clear()
+        append_frames()
+        self.callback(frames, users_message)
+        frames.clear()
 
         while True:
             user_action = get_event()
@@ -175,18 +175,18 @@ class Controller(ABC):
                     try:
                         parse_user_action()
                     except ValueError as exception:
-                        user_error = user, str(exception)
+                        users_message = [user], str(exception)
 
                         print_exc()
                     else:
-                        append_data()
+                        append_frames()
                 else:
                     warn('cannot handle event')
 
-            data_count = None
+            frame_count = None
 
-            while data_count != len(data):
-                data_count = len(data)
+            while frame_count != len(frames):
+                frame_count = len(frames)
 
                 for user in table.users:
                     seat = table.get_seat(user)
@@ -217,7 +217,7 @@ class Controller(ABC):
                             and table.can_leave(user)
                     ):
                         table.leave(user)
-                        append_data()
+                        append_frames()
 
                 status = is_past_timestamp(state_construction_timestamp)
 
@@ -230,7 +230,7 @@ class Controller(ABC):
 
                 if status and table.can_construct_state():
                     table.construct_state()
-                    append_data()
+                    append_frames()
 
                 status = is_past_timestamp(state_destruction_timestamp)
 
@@ -249,7 +249,7 @@ class Controller(ABC):
                         )
 
                     table.destroy_state()
-                    append_data()
+                    append_frames()
 
                 if table.state is None:
                     standing_pat_timestamp = None
@@ -273,7 +273,7 @@ class Controller(ABC):
                         else:
                             raise AssertionError
 
-                        append_data()
+                        append_frames()
 
                     status = True
 
@@ -297,7 +297,7 @@ class Controller(ABC):
                         status = False
 
                     if status:
-                        append_data()
+                        append_frames()
 
                     status = is_past_timestamp(standing_pat_timestamp)
 
@@ -310,7 +310,7 @@ class Controller(ABC):
 
                     if status and table.state.can_stand_pat_or_discard():
                         table.state.stand_pat_or_discard()
-                        append_data()
+                        append_frames()
 
                     status = is_past_timestamp(betting_timestamp)
 
@@ -331,7 +331,7 @@ class Controller(ABC):
                         else:
                             raise AssertionError
 
-                        append_data()
+                        append_frames()
 
                     status = is_past_timestamp(
                         hole_cards_showing_or_mucking_timestamp,
@@ -348,7 +348,7 @@ class Controller(ABC):
 
                     if status and table.state.can_show_or_muck_hole_cards():
                         table.state.show_or_muck_hole_cards()
-                        append_data()
+                        append_frames()
 
             for user in set(idle_timestamps) - set(table.users):
                 idle_timestamps.pop(user)
@@ -360,11 +360,11 @@ class Controller(ABC):
             # timestamp = get_now_timestamp()
             # auto_timestamp = get_auto_timestamp()
 
-            if data or user_error is not None:
-                self.callback(data, user_error)
+            if frames or users_message is not None:
+                self.callback(frames, users_message)
 
-            data.clear()
-            user_error = None
+            frames.clear()
+            users_message = None
 
 
 @dataclass

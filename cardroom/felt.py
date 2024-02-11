@@ -4,10 +4,9 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field, KW_ONLY
 from functools import partial
 from itertools import chain
-from math import pi
 from typing import overload, TypeVar
 
-from pokerkit import Card, CompletionBettingOrRaisingTo, HandHistory
+from pokerkit import Card, HandHistory
 
 from cardroom.table import Table
 
@@ -18,124 +17,124 @@ _T = TypeVar('_T')
 class Configuration:
     _: KW_ONLY
 
-    background_color: str = 'gray'
+    background_color: str
 
-    table_border_color: str = 'saddlebrown'
-    table_felt_color: str = 'seagreen'
-    table_x: float = 0
-    table_y: float = 0
-    table_outer_width: float = 0.6
-    table_outer_height: float = 0.35
-    table_inner_width: float = 0.55
-    table_inner_height: float = 0.3
+    table_border_color: str
+    table_felt_color: str
+    table_x: float
+    table_y: float
+    table_outer_width: float
+    table_outer_height: float
+    table_inner_width: float
+    table_inner_height: float
 
-    button_color: str = 'white'
-    button_angle: float = pi / 24
-    button_ring_width: float = 0.5
-    button_ring_height: float = 0.25
-    button_diameter: float = 0.035
-    button_text_color: str = 'black'
-    button_text_style: str = 'bold'
-    button_text_font: str = 'sans'
-    button_text_size: float = 0.025
-    button_text: str = 'B'
+    button_color: str
+    button_angle: float
+    button_ring_width: float
+    button_ring_height: float
+    button_diameter: float
+    button_text_color: str
+    button_text_style: str
+    button_text_font: str
+    button_text_size: float
+    button_text: str
 
-    board_x: float = 0
-    board_y: float = -0.05
-    board_width: float = 0.3
-    board_height: float = 0.025
-    board_radius: float = 0.0125
-    board_color: str = 'black'
-    board_pot_text: str = 'Pot: '
-    board_pot_text_color: str = 'white'
-    board_pot_text_style: str = 'bold'
-    board_pot_text_font: str = 'sans'
-    board_pot_text_size: float = 0.02
-    board_card_margin: float = 0.0025
-    board_card_height: float = 0.06
-    board_card_radius: float = 0.005
-    board_card_color: str = 'white'
-    board_card_text_style: str = 'bold'
-    board_card_text_font: str = 'sans'
-    board_card_text_size: float = 0.025
+    board_x: float
+    board_y: float
+    board_width: float
+    board_height: float
+    board_radius: float
+    board_color: str
+    board_pot_text: str
+    board_pot_text_color: str
+    board_pot_text_style: str
+    board_pot_text_font: str
+    board_pot_text_size: float
+    board_card_margin: float
+    board_card_height: float
+    board_card_radius: float
+    board_card_color: str
+    board_card_text_style: str
+    board_card_text_font: str
+    board_card_text_size: float
 
-    bet_ring_width: float = 0.425
-    bet_ring_height: float = 0.175
-    bet_angle: float = 0
-    bet_box_color: str = 'black'
-    bet_box_x_padding: float = 0.025
-    bet_box_height: float = 0.025
-    bet_box_radius: float = 0.0125
-    bet_text_style: str = 'bold'
-    bet_text_color: str = 'white'
-    bet_text_font: str = 'sans'
-    bet_text_size: float = 0.02
+    bet_ring_width: float
+    bet_ring_height: float
+    bet_angle: float
+    bet_box_color: str
+    bet_box_x_padding: float
+    bet_box_height: float
+    bet_box_radius: float
+    bet_text_style: str
+    bet_text_color: str
+    bet_text_font: str
+    bet_text_size: float
 
-    seat_ring_width: float = 0.8
-    seat_ring_height: float = 0.55
-    seat_angle: float = 0
+    seat_ring_width: float
+    seat_ring_height: float
+    seat_angle: float
 
-    hole_x: float = 0
-    hole_y: float = 0
-    hole_width: float = 0.225
-    hole_height: float = 0.03
-    hole_radius: float = 0.005
-    hole_color: str = 'black'
-    hole_card_margin: float = 0.003
-    hole_card_height: float = 0.05
-    hole_card_radius: float = 0.004
-    hole_card_color: str = 'white'
-    hole_card_text_style: str = 'bold'
-    hole_card_text_font: str = 'sans'
-    hole_card_text_size: float = 0.025
+    hole_x: float
+    hole_y: float
+    hole_width: float
+    hole_height: float
+    hole_radius: float
+    hole_color: str
+    hole_card_margin: float
+    hole_card_height: float
+    hole_card_radius: float
+    hole_card_color: str
+    hole_card_text_style: str
+    hole_card_text_font: str
+    hole_card_text_size: float
 
-    name_x: float = 0
-    name_y: float = 0
-    name_box_width: float = 0.225
-    name_box_height: float = 0.03
-    name_box_radius: float = 0
-    name_box_color: str = 'darkblue'
-    name_text_style: str = 'bold'
-    name_text_color: str = 'white'
-    name_text_font: str = 'sans'
-    name_text_size: float = 0.02
+    name_x: float
+    name_y: float
+    name_box_width: float
+    name_box_height: float
+    name_box_radius: float
+    name_box_color: str
+    name_text_style: str
+    name_text_color: str
+    name_text_font: str
+    name_text_size: float
 
-    stack_x: float = 0
-    stack_y: float = -0.03
-    stack_box_width: float = 0.225
-    stack_box_height: float = 0.03
-    stack_box_radius: float = 0
-    stack_box_color: str = 'black'
-    stack_text_style: str = 'bold'
-    stack_text_color: str = 'white'
-    stack_text_font: str = 'sans'
-    stack_text_size: float = 0.02
+    stack_x: float
+    stack_y: float
+    stack_box_width: float
+    stack_box_height: float
+    stack_box_radius: float
+    stack_box_color: str
+    stack_text_style: str
+    stack_text_color: str
+    stack_text_font: str
+    stack_text_size: float
 
-    previous_action_x: float = 0
-    previous_action_y: float = -0.06
-    previous_action_box_width: float = 0.225
-    previous_action_box_height: float = 0.03
-    previous_action_box_radius: float = 0
-    previous_action_box_color: str = 'darkgray'
-    previous_action_text_style: str = 'bold'
-    previous_action_text_color: str = 'black'
-    previous_action_text_font: str = 'sans'
-    previous_action_text_size: float = 0.02
+    previous_action_x: float
+    previous_action_y: float
+    previous_action_box_width: float
+    previous_action_box_height: float
+    previous_action_box_radius: float
+    previous_action_box_color: str
+    previous_action_text_style: str
+    previous_action_text_color: str
+    previous_action_text_font: str
+    previous_action_text_size: float
 
-    club_color: str = 'green'
-    diamond_color: str = 'blue'
-    heart_color: str = 'red'
-    spade_color: str = 'black'
-    unknown_color: str = 'white'
+    club_color: str
+    diamond_color: str
+    heart_color: str
+    spade_color: str
+    unknown_color: str
 
-    shifter_timeout: float = 0.25
-    watchdog_timeout: float = 1
+    shifter_timeout: float
+    watchdog_timeout: float
 
-    frame_rate: float = 1000
+    frame_rate: float
 
 
 @dataclass
-class Data:
+class Frame:
     _: KW_ONLY
     names: list[str | None] = field(default_factory=list)
     button: int | None = None
@@ -161,7 +160,7 @@ class Data:
     show_or_muck_hole_cards: bool | None = None
 
     @classmethod
-    def from_table(cls, table: Table) -> dict[str, Data]:
+    def from_table(cls, table: Table) -> dict[str, Frame]:
         button = None if table.button is None else table.button.seat_index
         hole_statuses = list[bool]()
 
@@ -202,7 +201,7 @@ class Data:
                 ):
                     actor = seat.index
 
-        data = {}
+        frames = {}
 
         for user in chain(table.users, ('',)):
             holes = list[list[Card] | None]()
@@ -269,14 +268,7 @@ class Data:
                     )
 
                     complete_bet_or_raise_to = (
-                        (
-                            table.state.street_index == 0
-                            and table.state.bring_in > 0
-                            and (
-                                CompletionBettingOrRaisingTo
-                                not in set(map(type, table.state.operations))
-                            )
-                        ),
+                        table.state.completion_status,
                         any(table.state.bets),
                         (
                             table
@@ -317,7 +309,7 @@ class Data:
                 else:
                     holes.append(None)
 
-            data[user] = Data(
+            frames[user] = Frame(
                 names=names,
                 button=button,
                 bets=bets,
@@ -342,10 +334,10 @@ class Data:
                 show_or_muck_hole_cards=show_or_muck_hole_cards,
             )
 
-        return data
+        return frames
 
     @classmethod
-    def from_hand_history(cls, hand_history: HandHistory) -> Iterator[Data]:
+    def from_hand_history(cls, hand_history: HandHistory) -> Iterator[Frame]:
 
         @overload
         def p2s(players: int) -> int:
@@ -436,7 +428,56 @@ class Data:
             else:
                 actor = None
 
-            yield Data(
+            if state.can_stand_pat_or_discard():
+                assert state.stander_pat_or_discarder_index is not None
+
+                stand_pat_or_discard = list(
+                    state.get_down_cards(state.stander_pat_or_discarder_index),
+                )
+            else:
+                stand_pat_or_discard = None
+
+            fold = state.can_fold()
+
+            if state.can_check_or_call():
+                check_or_call = state.checking_or_calling_amount
+            else:
+                check_or_call = None
+
+            if state.can_post_bring_in():
+                post_bring_in = state.bring_in
+            else:
+                post_bring_in = None
+
+            if state.can_complete_bet_or_raise_to():
+                assert (
+                    state.min_completion_betting_or_raising_to_amount
+                    is not None
+                )
+                assert (
+                    state.max_completion_betting_or_raising_to_amount
+                    is not None
+                )
+
+                complete_bet_or_raise_to = (
+                    state.completion_status,
+                    any(state.bets),
+                    state.min_completion_betting_or_raising_to_amount,
+                    state.max_completion_betting_or_raising_to_amount,
+                )
+            else:
+                complete_bet_or_raise_to = None
+
+            if state.can_show_or_muck_hole_cards():
+                assert state.showdown_index is not None
+
+                show_or_muck_hole_cards = state.can_win_now(
+                    state.showdown_index,
+                )
+            else:
+                show_or_muck_hole_cards = None
+
+            yield Frame(
                 names=names,
                 button=button,
                 bets=bets,
@@ -448,4 +489,10 @@ class Data:
                 board_count=board_count,
                 previous_action=previous_action,
                 actor=actor,
+                stand_pat_or_discard=stand_pat_or_discard,
+                fold=fold,
+                check_or_call=check_or_call,
+                post_bring_in=post_bring_in,
+                complete_bet_or_raise_to=complete_bet_or_raise_to,
+                show_or_muck_hole_cards=show_or_muck_hole_cards,
             )

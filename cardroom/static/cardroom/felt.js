@@ -22,16 +22,16 @@ class Felt {
 		"?": "unknown_color",
 	};
 
-	constructor(width, height, canvas, configuration, dataGetter) {
+	constructor(width, height, canvas, configuration, frameGetter) {
 		this.width = width;
 		this.height = height;
 		this.canvas = canvas;
 		this.configuration = configuration;
-		this.dataGetter = dataGetter;
+		this.frameGetter = frameGetter;
 	}
 
-	get data() {
-		return this.dataGetter();
+	get frame() {
+		return this.frameGetter();
 	}
 
 	getPointOnEllipse(x, y, w, h, angle) {
@@ -68,7 +68,7 @@ class Felt {
 	}
 
 	draw() {
-		const data = this.data;
+		const frame = this.frame;
 
 		push();
 
@@ -76,15 +76,15 @@ class Felt {
 		scale(min(width, height), -min(width, height));
 
 		background(configuration["background_color"]);
-		this.drawTable(data);
+		this.drawTable(frame);
 
-		for (let i = 0; i < data["names"].length; ++i)
-			this.drawSeat(data, i);
+		for (let i = 0; i < frame["names"].length; ++i)
+			this.drawSeat(frame, i);
 
 		pop();
 	}
 
-	drawTable(data) {
+	drawTable(frame) {
 		push();
 
 		translate(configuration["table_x"], configuration["table_y"]);
@@ -122,15 +122,15 @@ class Felt {
 		strokeWeight(0);
 		textStyle(configuration["board_pot_text_style"]);
 		textFont(configuration["board_pot_text_font"], configuration["board_pot_text_size"]);
-		this.text(configuration["board_pot_text"] + data["pots"].join(", "), 0, 0);
+		this.text(configuration["board_pot_text"] + frame["pots"].join(", "), 0, 0);
 		pop();
 
-		if (data["board_count"] > 0) {
-			const boardCardWidth = (configuration["board_width"] - 2 * configuration["board_radius"] - (data["board_count"] - 1) * configuration["board_card_margin"]) / data["board_count"];
+		if (frame["board_count"] > 0) {
+			const boardCardWidth = (configuration["board_width"] - 2 * configuration["board_radius"] - (frame["board_count"] - 1) * configuration["board_card_margin"]) / frame["board_count"];
 			let boardCardX = -configuration["board_width"] / 2 + configuration["board_radius"] + boardCardWidth / 2;
 			const boardCardY = configuration["board_height"] / 2 + configuration["board_card_height"] / 2 + configuration["board_card_margin"];
 
-			for (const card of data["board"]) {
+			for (const card of frame["board"]) {
 				push();
 
 				translate(boardCardX, boardCardY);
@@ -160,14 +160,14 @@ class Felt {
 		pop();
 	}
 
-	drawSeat(data, index) {
-		const angle = -TAU * index / data["names"].length;
+	drawSeat(frame, index) {
+		const angle = -TAU * index / frame["names"].length;
 
 		push();
 
 		translate(configuration["table_x"], configuration["table_y"]);
 
-		if (data["button"] === index) {
+		if (frame["button"] === index) {
 			let point = this.getPointOnEllipse(0, 0, configuration["button_ring_width"], configuration["button_ring_height"], angle + configuration["button_angle"]);
 
 			push();
@@ -193,7 +193,7 @@ class Felt {
 			pop();
 		}
 
-		if (data["bets"][index] !== null && data["bets"][index] !== 0) {
+		if (frame["bets"][index] !== null && frame["bets"][index] !== 0) {
 			let point = this.getPointOnEllipse(0, 0, configuration["bet_ring_width"], configuration["bet_ring_height"], angle + configuration["bet_angle"]);
 
 			push();
@@ -203,7 +203,7 @@ class Felt {
 			textStyle(configuration["bet_text_style"]);
 			textFont(configuration["bet_text_font"], configuration["bet_text_size"]);
 
-			const betText = data["bets"][index];
+			const betText = frame["bets"][index];
 			const betBoxWidth = textWidth(betText) + configuration["bet_box_x_padding"];
 
 			push();
@@ -229,7 +229,7 @@ class Felt {
 
 		translate(point.x, point.y);
 
-		if (data["holes"][index] !== null) {
+		if (frame["holes"][index] !== null) {
 			push();
 
 			translate(configuration["hole_x"], configuration["hole_y"]);
@@ -241,19 +241,19 @@ class Felt {
 			rect(0, 0, configuration["hole_width"], configuration["hole_height"], configuration["hole_radius"]);
 			pop();
 
-			let cardCount = data["hole_statuses"].reduce((a, b) => a + b, 0);
-			cardCount = Math.max(cardCount, data["hole_statuses"].length - cardCount);
+			let cardCount = frame["hole_statuses"].reduce((a, b) => a + b, 0);
+			cardCount = Math.max(cardCount, frame["hole_statuses"].length - cardCount);
 			const holeCardWidth = (configuration["hole_width"] - 2 * configuration["hole_radius"] - (cardCount - 1) * configuration["hole_card_margin"]) / cardCount;
 			const initialHoleCardX = -configuration["hole_width"] / 2 + configuration["hole_radius"] + holeCardWidth / 2;
 			let holeCardX = initialHoleCardX;
 			let holeCardY = configuration["hole_height"] / 2 + configuration["hole_card_height"] / 2 + configuration["hole_card_margin"];
 
 			for (const status_ of [false, true]) {
-				for (let i = 0; i < data["holes"][index].length; ++i) {
-					if (data["hole_statuses"][i] !== status_)
+				for (let i = 0; i < frame["holes"][index].length; ++i) {
+					if (frame["hole_statuses"][i] !== status_)
 						continue;
 
-					const card = data["holes"][index][i];
+					const card = frame["holes"][index][i];
 
 					push();
 
@@ -287,7 +287,7 @@ class Felt {
 			pop();
 		}
 
-		if (data["names"][index] !== null) {
+		if (frame["names"][index] !== null) {
 			push();
 
 			translate(configuration["name_x"], configuration["name_y"]);
@@ -305,13 +305,13 @@ class Felt {
 			strokeWeight(0);
 			textStyle(configuration["name_text_style"]);
 			textFont(configuration["name_text_font"], configuration["name_text_size"]);
-			this.text(data["names"][index], 0, 0);
+			this.text(frame["names"][index], 0, 0);
 			pop();
 
 			pop();
 		}
 
-		if (data["stacks"][index] !== null) {
+		if (frame["stacks"][index] !== null) {
 			push();
 
 			translate(configuration["stack_x"], configuration["stack_y"]);
@@ -329,13 +329,13 @@ class Felt {
 			strokeWeight(0);
 			textStyle(configuration["stack_text_style"]);
 			textFont(configuration["stack_text_font"], configuration["stack_text_size"]);
-			this.text(data["stacks"][index], 0, 0);
+			this.text(frame["stacks"][index], 0, 0);
 			pop();
 
 			pop();
 		}
 
-		if (data["previous_action"] !== null && data["previous_action"][0] === index) {
+		if (frame["previous_action"] !== null && frame["previous_action"][0] === index) {
 			push();
 
 			translate(configuration["previous_action_x"], configuration["previous_action_y"]);
@@ -353,7 +353,7 @@ class Felt {
 			strokeWeight(0);
 			textStyle(configuration["previous_action_text_style"]);
 			textFont(configuration["previous_action_text_font"], configuration["previous_action_text_size"]);
-			this.text(data["previous_action"][1], 0, 0);
+			this.text(frame["previous_action"][1], 0, 0);
 			pop();
 
 			pop();

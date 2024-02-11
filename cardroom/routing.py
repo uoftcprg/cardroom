@@ -8,6 +8,6 @@ urlpatterns: list[URLResolver] = [
     path(
         'cash-games/<int:pk>/',
         CashGameConsumer.as_asgi(),
-        name='cash-game-websocket',
+        name='cashgame_websocket',
     ),
 ]

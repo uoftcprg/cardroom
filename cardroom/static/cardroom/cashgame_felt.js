@@ -52,15 +52,15 @@ function showHoleCards() {
 	smCards.value = "";
 }
 
-function getData() {
-	dataGuard = false;
+function getFrame() {
+	frameGuard = false;
 
-	return data[0];
+	return frames[0];
 }
 
 function shifter() {
-	if (!dataGuard && data.length > 1)
-		data.shift();
+	if (!frameGuard && frames.length > 1)
+		frames.shift();
 }
 
 function createWebSocket() {
@@ -73,80 +73,80 @@ function watchdog() {
 }
 
 function updateActions() {
-	const subData = data[data.length - 1];
+	const frame = frames[frames.length - 1];
 
 	jButton.innerText = "Join";
 
-	if (subData["join"] === null)
+	if (frame["join"] === null)
 		jSeatIndex.value = "";
 	else
-		jSeatIndex.value = subData["join"].join(", ");
+		jSeatIndex.value = frame["join"].join(", ");
 
-	jButton.disabled = subData["join"] === null;
-	jSeatIndex.disabled = subData["join"] === null;
+	jButton.disabled = frame["join"] === null;
+	jSeatIndex.disabled = frame["join"] === null;
 	lButton.innerText = "Leave";
-	lButton.disabled = !subData["leave"];
+	lButton.disabled = !frame["leave"];
 	sButton.innerText = "Sit out";
-	sButton.disabled = !subData["sit_out"];
+	sButton.disabled = !frame["sit_out"];
 	bButton.innerText = "I'm back";
-	bButton.disabled = !subData["be_back"];
+	bButton.disabled = !frame["be_back"];
 	brtrButton.innerText = "Override stack";
-	brtrButton.disabled = subData["buy_rebuy_top_off_or_rat_hole"] === null;
+	brtrButton.disabled = frame["buy_rebuy_top_off_or_rat_hole"] === null;
 
-	if (subData["buy_rebuy_top_off_or_rat_hole"] === null)
+	if (frame["buy_rebuy_top_off_or_rat_hole"] === null)
 		brtrAmount.value = "";
 	else
-		brtrAmount.value = subData["buy_rebuy_top_off_or_rat_hole"].join(" - ");
+		brtrAmount.value = frame["buy_rebuy_top_off_or_rat_hole"].join(" - ");
 
-	brtrAmount.disabled = subData["buy_rebuy_top_off_or_rat_hole"] === null;
+	brtrAmount.disabled = frame["buy_rebuy_top_off_or_rat_hole"] === null;
 	sdButton.innerText = "Stand pat/Discard";
-	sdButton.disabled = subData["stand_pat_or_discard"] === null;
+	sdButton.disabled = frame["stand_pat_or_discard"] === null;
 	
-	if (subData["stand_pat_or_discard"] === null)
+	if (frame["stand_pat_or_discard"] === null)
 		sdCards.value = "";
 	else
-		sdCards.value = subData["stand_pat_or_discard"].join("");
+		sdCards.value = frame["stand_pat_or_discard"].join("");
 
-	sdCards.disabled = subData["stand_pat_or_discard"] === null;
+	sdCards.disabled = frame["stand_pat_or_discard"] === null;
 	fButton.innerText = "Fold";
-	fButton.disabled = !subData["fold"];
+	fButton.disabled = !frame["fold"];
 
-	if (subData["check_or_call"] === null)
+	if (frame["check_or_call"] === null)
 		ccButton.innerText = "Check/Call";
-	else if (subData["check_or_call"] === 0)
+	else if (frame["check_or_call"] === 0)
 		ccButton.innerText = "Check";
 	else
-		ccButton.innerText = `Call ${subData["check_or_call"]}`;
+		ccButton.innerText = `Call ${frame["check_or_call"]}`;
 
-	ccButton.disabled = subData["check_or_call"] === null;
+	ccButton.disabled = frame["check_or_call"] === null;
 
-	if (subData["post_bring_in"] === null)
+	if (frame["post_bring_in"] === null)
 		pbButton.innerText = "Bring-in";
 	else
-		pbButton.innerText = `Bring-in ${subData["post_bring_in"]}`;
+		pbButton.innerText = `Bring-in ${frame["post_bring_in"]}`;
 
-	pbButton.disabled = subData["post_bring_in"] === null;
+	pbButton.disabled = frame["post_bring_in"] === null;
 
-	if (subData["complete_bet_or_raise_to"] === null)
+	if (frame["complete_bet_or_raise_to"] === null)
 		cbrButton.innerText = "Complete/Bet/Raise to";
-	else if (subData["complete_bet_or_raise_to"][0])
+	else if (frame["complete_bet_or_raise_to"][0])
 		cbrButton.innerText = "Complete";
-	else if (subData["complete_bet_or_raise_to"][1])
+	else if (frame["complete_bet_or_raise_to"][1])
 		cbrButton.innerText = "Raise";
 	else
 		cbrButton.innerText = "Bet";
 
-	if (subData["complete_bet_or_raise_to"] === null)
+	if (frame["complete_bet_or_raise_to"] === null)
 		cbrAmount.value = "";
 	else
-		cbrAmount.value = `${subData["complete_bet_or_raise_to"][2]} - ${subData["complete_bet_or_raise_to"][3]}`;
+		cbrAmount.value = `${frame["complete_bet_or_raise_to"][2]} - ${frame["complete_bet_or_raise_to"][3]}`;
 
-	cbrButton.disabled = subData["complete_bet_or_raise_to"] === null;
-	cbrAmount.disabled = subData["complete_bet_or_raise_to"] === null;
+	cbrButton.disabled = frame["complete_bet_or_raise_to"] === null;
+	cbrAmount.disabled = frame["complete_bet_or_raise_to"] === null;
 	smButton.innerText = "Show/Muck";
-	smCards.value = subData["show_or_muck_hole_cards"] ? "-" : "";
-	smButton.disabled = subData["show_or_muck_hole_cards"] === null;
-	smCards.disabled = subData["show_or_muck_hole_cards"] === null;
+	smCards.value = frame["show_or_muck_hole_cards"] ? "-" : "";
+	smButton.disabled = frame["show_or_muck_hole_cards"] === null;
+	smCards.disabled = frame["show_or_muck_hole_cards"] === null;
 }
 
 const canvas = document.getElementById("felt");
@@ -169,9 +169,9 @@ const smCards = document.getElementById("sm-cards");
 const pk = JSON.parse(document.getElementById("pk").textContent);
 const websocketURL = JSON.parse(document.getElementById("websocket_url").textContent);
 const configuration = JSON.parse(document.getElementById("configuration").textContent);
-let dataGuard = true;
-let data = [JSON.parse(document.getElementById("data").textContent)];
-const felt = new Felt(canvas.width, canvas.height, canvas, configuration, getData);
+let frameGuard = true;
+let frames = [JSON.parse(document.getElementById("frame").textContent)];
+const felt = new Felt(canvas.width, canvas.height, canvas, configuration, getFrame);
 let protocol;
 
 if (location.protocol === "http:")
@@ -186,14 +186,14 @@ webSocket.onmessage = function(event) {
 	eventData = JSON.parse(event.data);
 
 	switch (eventData.type) {
-	case "data":
-		dataGuard = true;
+	case "update":
+		frameGuard = true;
 
-		data.push(...eventData["data"]);
+		frames.push(...eventData["frames"]);
 		updateActions();
 
 		break;
-	case "message":
+	case "notify":
 		alert(eventData["message"]);
 
 		break;

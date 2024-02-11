@@ -37,29 +37,29 @@ class HandHistoryViewSet(ModelViewSet):
 
 class CashGameFeltView(DetailView):
     model = CashGame
-    template_name = 'cardroom/cash-game.html'
+    template_name = 'cardroom/cashgame_felt.html'
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['configuration'] = asdict(get_configuration())
-        context['data'] = asdict(self.object.get_data(self.request.user))
+        context['frame'] = asdict(self.object.get_frame(self.request.user))
 
         return context
 
 
 class HandHistoryFeltView(DetailView):
     model = HandHistory
-    template_name = 'cardroom/hand-history.html'
+    template_name = 'cardroom/handhistory_felt.html'
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['configuration'] = asdict(get_configuration())
-        context['data'] = serialize(self.object.data)
+        context['frames'] = serialize(self.object.frames)
 
         return context
 
 
-class CashGameFeltDataView(DetailView):
+class CashGameFrameView(DetailView):
     model = CashGame
 
     def render_to_response(
@@ -67,10 +67,10 @@ class CashGameFeltDataView(DetailView):
             context: dict[str, Any],
             **response_kwargs: Any,
     ) -> JsonResponse:
-        return JsonResponse(asdict(self.object.get_data(self.request.user)))
+        return JsonResponse(asdict(self.object.get_frame(self.request.user)))
 
 
-class HandHistoryFeltDataView(DetailView):
+class HandHistoryFramesView(DetailView):
     model = HandHistory
 
     def render_to_response(
@@ -78,4 +78,4 @@ class HandHistoryFeltDataView(DetailView):
             context: dict[str, Any],
             **response_kwargs: Any,
     ) -> JsonResponse:
-        return JsonResponse(serialize(self.object.data), safe=False)
+        return JsonResponse(serialize(self.object.frames), safe=False)

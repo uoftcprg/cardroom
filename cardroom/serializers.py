@@ -27,10 +27,10 @@ class TableSerializer(CardroomHyperlinkedModelSerializer):
 
 
 class CashGameSerializer(CardroomHyperlinkedModelSerializer):
-    data_url = SerializerMethodField()
+    frame_url = SerializerMethodField()
 
-    def get_data_url(self, obj: CashGame) -> str:
-        return self.request.build_absolute_uri(obj.get_data_url())
+    def get_frame_url(self, obj: CashGame) -> str:
+        return self.request.build_absolute_uri(obj.get_frame_url())
 
     websocket_url = SerializerMethodField()
 
@@ -59,10 +59,10 @@ class CashGameSerializer(CardroomHyperlinkedModelSerializer):
 
 class HandHistorySerializer(CardroomHyperlinkedModelSerializer):
     url_field_name = 'url_'
-    data_url = SerializerMethodField()
+    frames_url = SerializerMethodField()
 
-    def get_data_url(self, obj: HandHistory) -> str:
-        return self.request.build_absolute_uri(obj.get_data_url())
+    def get_frames_url(self, obj: HandHistory) -> str:
+        return self.request.build_absolute_uri(obj.get_frames_url())
 
     if get_felt():
         felt_url = SerializerMethodField()

@@ -4,7 +4,7 @@ from asgiref.sync import async_to_sync
 from channels.generic.websocket import JsonWebsocketConsumer
 
 from cardroom.models import CashGame
-from cardroom.gamemaster import handle, get_data
+from cardroom.gamemaster import handle, get_frames
 from cardroom.utilities import serialize
 
 
@@ -28,8 +28,11 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
             self.controller.group_name,
             self.channel_name,
         )
-        self.data(
-            {'type': 'data', 'data': (serialize(get_data(self.controller)),)},
+        self.update(
+            {
+                'type': 'update',
+                'frames': [serialize(get_frames(self.controller))],
+            },
         )
 
     def disconnect(self, code):
@@ -43,37 +46,24 @@ class ControllerConsumer(JsonWebsocketConsumer, ABC):
         if self.user.is_authenticated:
             handle(self.controller, self.user, content)
         else:
-            self.message(
+            self.notify(
                 {
-                    'type': 'message',
-                    'user': '',
+                    'type': 'notify',
+                    'users': [''],
                     'message': 'you are unauthenticated',
                 },
             )
 
-    def data(self, event):
-        self.send_json(
-            (
-                event
-                | {
-                    'data': [
-                        data.get(
-                            self.user.username,
-                            data[''],
-                        ) for data in event['data']
-                    ],
-                }
-            ),
-        )
+    def update(self, event):
+        frames = []
 
-    def message(self, event):
-        if (
-                (self.user.is_anonymous and not event['user'])
-                or (
-                    self.user.is_authenticated
-                    and event['user'] == self.user.username
-                )
-        ):
+        for sub_frames in event['frames']:
+            frames.append(sub_frames.get(self.user.username, sub_frames['']))
+
+        self.send_json(event | {'frames': frames})
+
+    def notify(self, event):
+        if self.user.username in event['users']:
             self.send_json(event)
 
 

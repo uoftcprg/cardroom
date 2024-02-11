@@ -14,6 +14,6 @@
 
 {% block scripts %}
 {{ configuration|json_script:"configuration" }}
-{{ data|json_script:"data" }}
-<script src="{% static 'cardroom/hand-history.js' %}"></script>
+{{ frames|json_script:"frames" }}
+<script src="{% static 'cardroom/handhistory_felt.js' %}"></script>
 {% endblock %}

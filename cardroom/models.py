@@ -6,7 +6,7 @@ from functools import partial
 from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import models
 from django.urls import NoReverseMatch, reverse
 from django.utils.translation import gettext_lazy as _
@@ -14,8 +14,8 @@ from pokerkit import Automation, ValuesLike
 import pokerkit
 
 from cardroom.apps import CardroomConfig
-from cardroom.felt import Data
-from cardroom.gamemaster import broadcast, get_data
+from cardroom.felt import Frame
+from cardroom.gamemaster import broadcast, get_frames
 from cardroom.utilities import (
     get_divmod,
     get_felt,
@@ -92,6 +92,19 @@ class Poker(models.Model):
 
         return pokerkit.HandHistory.game_types[self.variant](**kwargs)
 
+    def clean(self) -> None:
+        try:
+            self.load()
+        except KeyError:
+            raise ValidationError(f'invalid variant code {repr(self.variant)}')
+        except TypeError:
+            raise ValidationError('forbidden field supplied')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+
+        super().save(*args, **kwargs)
+
     class Meta:
         verbose_name_plural = 'poker'
 
@@ -132,32 +145,32 @@ class Controller(models.Model):
 class CashGame(Controller):
     table = models.ForeignKey(Table, models.PROTECT)
 
-    def get_data(self, user: AbstractUser) -> Data:
-        data = get_data(self)
+    def get_frame(self, user: AbstractUser) -> Frame:
+        frames = get_frames(self)
 
-        return data.get(user.username, data[''])
+        return frames.get(user.username, frames[''])
 
-    def get_data_url(self) -> str:
+    def get_frame_url(self) -> str:
         try:
             url = reverse(
-                f'{CardroomConfig.name}:cash-game-data',
+                f'{CardroomConfig.name}:cashgame_frame',
                 kwargs={'pk': self.pk},
             )
         except NoReverseMatch:
-            url = reverse('cash-game-data', kwargs={'pk': self.pk})
+            url = reverse('cashgame_frame', kwargs={'pk': self.pk})
 
         return url
 
     def get_websocket_url(self) -> str:
         try:
             url = reverse(
-                f'{CardroomConfig.name}:cash-game-websocket',
+                f'{CardroomConfig.name}:cashgame_websocket',
                 get_root_routingconf(),
                 kwargs={'pk': self.pk},
             )
         except NoReverseMatch:
             url = reverse(
-                'cash-game-websocket',
+                'cashgame_websocket',
                 get_root_routingconf(),
                 kwargs={'pk': self.pk},
             )
@@ -168,11 +181,11 @@ class CashGame(Controller):
         def get_felt_url(self) -> str:
             try:
                 url = reverse(
-                    f'{CardroomConfig.name}:cash-game-felt',
+                    f'{CardroomConfig.name}:cashgame_felt',
                     kwargs={'pk': self.pk},
                 )
             except NoReverseMatch:
-                url = reverse('cash-game-felt', kwargs={'pk': self.pk})
+                url = reverse('cashgame_felt', kwargs={'pk': self.pk})
 
             return url
 
@@ -243,17 +256,17 @@ class HandHistory(models.Model):
                 yield field.name
 
     @property
-    def data(self) -> Iterator[Data]:
-        return Data.from_hand_history(self.load())
+    def frames(self) -> Iterator[Frame]:
+        return Frame.from_hand_history(self.load())
 
-    def get_data_url(self) -> str:
+    def get_frames_url(self) -> str:
         try:
             url = reverse(
-                f'{CardroomConfig.name}:hand-history-data',
+                f'{CardroomConfig.name}:handhistory_frames',
                 kwargs={'pk': self.pk},
             )
         except NoReverseMatch:
-            url = reverse('hand-history-data', kwargs={'pk': self.pk})
+            url = reverse('handhistory_frames', kwargs={'pk': self.pk})
 
         return url
 
@@ -261,11 +274,11 @@ class HandHistory(models.Model):
         def get_felt_url(self) -> str:
             try:
                 url = reverse(
-                    f'{CardroomConfig.name}:hand-history-felt',
+                    f'{CardroomConfig.name}:handhistory_felt',
                     kwargs={'pk': self.pk},
                 )
             except NoReverseMatch:
-                url = reverse('hand-history-felt', kwargs={'pk': self.pk})
+                url = reverse('handhistory_felt', kwargs={'pk': self.pk})
 
             return url
 

@@ -5,7 +5,7 @@ from channels.layers import get_channel_layer
 
 from cardroom.utilities import serialize
 
-controller_lock = Lock()
+controllers_lock = Lock()
 controllers = {}
 threads = {}
 
@@ -21,7 +21,7 @@ def set_controller(model):
 
 
 def get_controller(model):
-    with controller_lock:
+    with controllers_lock:
         return controllers[model.group_name]
 
 
@@ -29,29 +29,29 @@ def handle(model, user, content):
     get_controller(model).handle(user.username, content)
 
 
-data_lock = Lock()
-data = {}
+frames_lock = Lock()
+frames = {}
 
 
-def broadcast(model, data_, user_message):
-    if data_ is not None and data_:
-        with data_lock:
-            data[model.group_name] = data_[-1]
-
-        async_to_sync(get_channel_layer().group_send)(
-            model.group_name,
-            {'type': 'data', 'data': serialize(data_)},
-        )
-
-    if user_message is not None:
-        user, message = user_message
+def broadcast(model, sub_frames, users_message):
+    if sub_frames is not None and sub_frames:
+        with frames_lock:
+            frames[model.group_name] = sub_frames[-1]
 
         async_to_sync(get_channel_layer().group_send)(
             model.group_name,
-            {'type': 'message', 'user': user, 'message': message},
+            {'type': 'update', 'frames': serialize(sub_frames)},
+        )
+
+    if users_message is not None:
+        users, message = users_message
+
+        async_to_sync(get_channel_layer().group_send)(
+            model.group_name,
+            {'type': 'notify', 'users': users, 'message': message},
         )
 
 
-def get_data(model):
-    with data_lock:
-        return data[model.group_name]
+def get_frames(model):
+    with frames_lock:
+        return frames[model.group_name]

@@ -1,15 +1,16 @@
 from django.contrib import admin
 from django.urls import include, path, URLPattern, URLResolver
+from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework.routers import DefaultRouter
 
 from cardroom.apps import CardroomConfig
-from cardroom.utilities import get_admin, get_auth, get_felt
+from cardroom.utilities import get_admin, get_felt
 from cardroom.views import (
-    CashGameFeltDataView,
     CashGameFeltView,
+    CashGameFrameView,
     CashGameViewSet,
-    HandHistoryFeltDataView,
     HandHistoryFeltView,
+    HandHistoryFramesView,
     HandHistoryViewSet,
     PokerViewSet,
     TableViewSet,
@@ -19,15 +20,17 @@ app_name: str = CardroomConfig.name
 router: DefaultRouter = DefaultRouter()
 urlpatterns: list[URLPattern | URLResolver] = [
     path(
-        'cash-games/<int:pk>/data/',
-        CashGameFeltDataView.as_view(),
-        name='cash-game-data',
+        'cash-games/<int:pk>/frame/',
+        CashGameFrameView.as_view(),
+        name='cashgame_frame',
     ),
     path(
-        'hand-histories/<int:pk>/data/',
-        HandHistoryFeltDataView.as_view(),
-        name='hand-history-data',
+        'hand-histories/<int:pk>/frames/',
+        HandHistoryFramesView.as_view(),
+        name='handhistory_frames',
     ),
+    path('auth/', include('rest_framework.urls')),
+    path('token-auth/', obtain_auth_token),
 ]
 
 router.register('poker', PokerViewSet)
@@ -38,22 +41,19 @@ router.register('hand-histories', HandHistoryViewSet)
 if get_admin():
     urlpatterns.append(path('admin/', admin.site.urls))
 
-if get_auth():
-    urlpatterns.append(path('api-auth/', include('rest_framework.urls')))
-
 if get_felt():
     urlpatterns.append(
         path(
             'cash-games/<int:pk>/felt/',
             CashGameFeltView.as_view(),
-            name='cash-game-felt',
+            name='cashgame_felt',
         ),
     )
     urlpatterns.append(
         path(
             'hand-histories/<int:pk>/felt/',
             HandHistoryFeltView.as_view(),
-            name='hand-history-felt',
+            name='handhistory_felt',
         ),
     )
 
