@@ -122,6 +122,7 @@ DEFAULT_CONFIGURATION: Configuration = Configuration(
     frame_rate=1000,
 )
 DEFAULT_ROOT_ROUTINGCONF: str = 'cardroom.routing'
+DEFAULT_GAMEMASTER_TIMEOUT: float = 1
 _divmod = divmod
 
 
@@ -198,6 +199,10 @@ def get_configuration() -> Configuration:
 
 def get_root_routingconf() -> Any:
     return getattr(settings, 'ROOT_ROUTINGCONF', DEFAULT_ROOT_ROUTINGCONF)
+
+
+def get_gamemaster_timeout() -> Any:
+    return getattr(settings, 'GAMEMASTER_TIMEOUT', DEFAULT_GAMEMASTER_TIMEOUT)
 
 
 def serialize(obj: Any) -> Any:

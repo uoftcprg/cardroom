@@ -1,9 +1,10 @@
 from threading import Thread, Lock
+from time import sleep
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
-from cardroom.utilities import serialize
+from cardroom.utilities import get_gamemaster_timeout, serialize
 
 controllers_lock = Lock()
 controllers = {}
@@ -55,3 +56,19 @@ def broadcast(model, sub_frames, users_message):
 def get_frames(model):
     with frames_lock:
         return frames[model.group_name]
+
+
+def mainloop():
+    from cardroom.models import CashGame
+
+    while True:
+        try:
+            for cash_game in CashGame.objects.all():
+                try:
+                    get_controller(cash_game)
+                except KeyError:
+                    set_controller(cash_game)
+        except (OperationalError, ProgrammingError):
+            pass
+
+        sleep(get_gamemaster_timeout())

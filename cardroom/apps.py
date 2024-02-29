@@ -1,3 +1,5 @@
+from threading import Thread
+
 from django.apps import AppConfig
 from django.db import OperationalError, ProgrammingError
 
@@ -5,17 +7,14 @@ from django.db import OperationalError, ProgrammingError
 class CardroomConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'cardroom'
+    thread = None
 
     def ready(self) -> None:
+        from cardroom.gamemaster import mainloop
         from cardroom.models import CashGame
-        from cardroom.gamemaster import set_controller
 
         __import__('cardroom.signals')
 
-        try:
-            cash_games = list(CashGame.objects.all())
-        except (OperationalError, ProgrammingError):
-            cash_games = []
+        self.thread = Thread(target=mainloop, daemon=True)
 
-        for cash_game in cash_games:
-            set_controller(cash_game)
+        self.thread.start()
