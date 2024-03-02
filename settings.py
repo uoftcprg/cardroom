@@ -195,3 +195,6 @@ CARDROOM_FELT = True
 # from cardroom.felt import Configuration
 #
 # CARDROOM_CONFIGURATION = Configuration(...)
+
+# Enable/disable mainloop in gamemaster
+CARDROOM_MAINLOOP = False

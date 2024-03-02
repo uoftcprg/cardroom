@@ -1,6 +1,7 @@
 from threading import Thread, Lock
 from time import sleep
 
+from django.db.utils import OperationalError, ProgrammingError
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
