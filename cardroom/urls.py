@@ -38,7 +38,7 @@ router.register('hand-histories', HandHistoryViewSet)
 
 if get_auth():
     urlpatterns.append(path('auth/', include('rest_framework.urls')))
-    urlpatterns.append(path('token-auth/', obtain_auth_token))
+    urlpatterns.append(path('auth/token/', obtain_auth_token))
 
 if get_admin():
     urlpatterns.append(path('admin/', admin.site.urls))

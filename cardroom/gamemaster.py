@@ -3,6 +3,7 @@ from time import sleep
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.db import OperationalError, ProgrammingError
 
 from cardroom.utilities import get_gamemaster_timeout, serialize
 
