@@ -10,9 +10,11 @@ from typing import Any
 from warnings import warn
 from zoneinfo import ZoneInfo
 
+from django.dispatch import Signal
 from pokerkit import min_or_none, parse_action
 
 from cardroom.felt import Frame
+from cardroom.signals import post_state_construction, pre_state_destruction
 from cardroom.table import Table
 
 
@@ -157,6 +159,14 @@ class Controller(ABC):
                     betting_timestamp = None
                     hole_cards_showing_or_mucking_timestamp = None
 
+        def send_signal(signal: Signal) -> None:
+            signal.send(
+                None,
+                instance=None,
+                controller=self,
+                table=table,
+            )
+
         time_banks = dict[str, float]()
         frames = list[dict[str, Frame]]()
         users_message = list[str](), ''
@@ -230,6 +240,7 @@ class Controller(ABC):
 
                 if status and table.can_construct_state():
                     table.construct_state()
+                    send_signal(post_state_construction)
                     append_frames()
 
                 status = is_past_timestamp(state_destruction_timestamp)
@@ -248,6 +259,7 @@ class Controller(ABC):
                             value + self.time_bank_increment,
                         )
 
+                    send_signal(pre_state_destruction)
                     table.destroy_state()
                     append_frames()
 
