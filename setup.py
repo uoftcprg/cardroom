@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='cardroom',
-    version='0.0.1.dev13',
+    version='0.0.1.dev14',
     description='A Django application for poker tournament and table management',
     long_description=open('README.rst').read(),
     long_description_content_type='text/x-rst',

@@ -141,6 +141,6 @@ def mainloop():  # TODO: revert to signal based approach
         sleep(get_gamemaster_timeout())
 
 
-MAINLOOP_THREAD = Thread(target=mainloop)
+MAINLOOP_THREAD = Thread(target=mainloop, daemon=True)
 
 MAINLOOP_THREAD.start()
