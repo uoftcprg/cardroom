@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import fields
 from functools import partial
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import FieldDoesNotExist, ValidationError
@@ -15,7 +15,6 @@ import pokerkit
 
 from cardroom.apps import CardroomConfig
 from cardroom.felt import Frame
-from cardroom.gamemaster import broadcast, get_frames
 from cardroom.utilities import (
     get_divmod,
     get_felt,
@@ -100,7 +99,7 @@ class Poker(models.Model):
         except TypeError:
             raise ValidationError('forbidden field supplied')
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         self.full_clean()
 
         super().save(*args, **kwargs)
@@ -146,6 +145,8 @@ class CashGame(Controller):
     table = models.ForeignKey(Table, models.PROTECT)
 
     def get_frame(self, user: AbstractUser) -> Frame:
+        from cardroom.consumers import get_frames
+
         frames = get_frames(self)
 
         return frames.get(user.username, frames[''])
@@ -193,6 +194,8 @@ class CashGame(Controller):
             return self.get_felt_url()
 
     def load(self) -> controller.CashGame:
+        from cardroom.consumers import broadcast
+
         return controller.CashGame(
             self.time_bank,
             self.time_bank_increment,

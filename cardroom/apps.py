@@ -1,5 +1,3 @@
-from threading import Thread
-
 from django.apps import AppConfig
 
 
@@ -9,10 +7,4 @@ class CardroomConfig(AppConfig):
     thread = None
 
     def ready(self) -> None:
-        from cardroom.gamemaster import mainloop
-
         __import__('cardroom.signals')
-
-        self.thread = Thread(target=mainloop, daemon=True)
-
-        self.thread.start()
