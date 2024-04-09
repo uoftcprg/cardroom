@@ -5,21 +5,50 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from queue import Empty, Queue
+from threading import Thread, Lock
 from traceback import print_exc
-from typing import Any
+from typing import Any, cast, ClassVar
 from warnings import warn
 from zoneinfo import ZoneInfo
 
 from django.dispatch import Signal
 from pokerkit import min_or_none, parse_action
 
-from cardroom.felt import Frame
+from cardroom.frame import Frame
 from cardroom.signals import post_state_construction, pre_state_destruction
 from cardroom.table import Table
 
 
 @dataclass
 class Controller(ABC):
+    lock: ClassVar[Lock] = Lock()
+    controllers: ClassVar[dict[str, Controller]] = {}
+    threads: ClassVar[dict[str, Thread]] = {}
+
+    @classmethod
+    def set(cls, name: str, controller: Controller) -> None:
+        with cls.lock:
+            if name in cls.controllers:
+                cls.controllers[name].handle('', 'terminate')
+                cls.threads[name].join()
+
+                cls.controllers.pop(name)
+                cls.threads.pop(name)
+
+            assert name not in cls.controllers
+            assert name not in cls.threads
+
+            thread = Thread(target=controller.mainloop, daemon=True)
+            cls.controllers[name] = controller
+            cls.threads[name] = thread
+
+            thread.start()
+
+    @classmethod
+    def get(cls, name: str) -> Controller:
+        with cls.lock:
+            return cls.controllers[name]
+
     time_bank: float
     """The time bank."""
     time_bank_increment: float
@@ -68,14 +97,17 @@ class Controller(ABC):
             return get_now_timestamp() + timedelta(seconds=timeout)
 
         def get_auto_timestamp() -> datetime | None:
-            return min_or_none(
-                (
-                    state_construction_timestamp,
-                    state_destruction_timestamp,
-                    *idle_timestamps.values(),
-                    standing_pat_timestamp,
-                    betting_timestamp,
-                    hole_cards_showing_or_mucking_timestamp,
+            return cast(
+                datetime | None,
+                min_or_none(
+                    (
+                        state_construction_timestamp,
+                        state_destruction_timestamp,
+                        *idle_timestamps.values(),
+                        standing_pat_timestamp,
+                        betting_timestamp,
+                        hole_cards_showing_or_mucking_timestamp,
+                    ),
                 ),
             )
 
@@ -96,7 +128,7 @@ class Controller(ABC):
             return event
 
         def append_frames() -> None:
-            frames.append(Frame.from_table(table))
+            frames.append(Frame.from_table(table, ()))
 
         def get_time_bank(user: str) -> float:
             time_banks.setdefault(user, self.time_bank)
@@ -269,8 +301,8 @@ class Controller(ABC):
                     hole_cards_showing_or_mucking_timestamp = None
                 else:
                     if (
-                            table.acting_seat is not None
-                            and not table.acting_seat.active_status
+                            table.turn_seat is not None
+                            and not table.turn_seat.active_status
                     ):
                         if table.state.can_stand_pat_or_discard():
                             table.state.stand_pat_or_discard()
@@ -391,12 +423,3 @@ class CashGame(Controller):
 
     def handle(self, user: str, event: Any) -> None:
         self.queue.put((user, event))
-
-
-@dataclass
-class Tournament(Controller):
-    def mainloop(self) -> None:
-        raise NotImplementedError
-
-    def handle(self, user: str, event: Any) -> None:
-        raise NotImplementedError

@@ -158,40 +158,14 @@ CARDROOM_PARSE_VALUE = 'builtins.int'
 
 CARDROOM_DECIMAL_PLACES = 0
 
-# # Use dollar values
-#
-# CARDROOM_DIVMOD = 'cardroom.utilities.divmod'
-#
-# CARDROOM_PARSE_VALUE = 'cardroom.utilities.parse_value'
-#
-# CARDROOM_DECIMAL_PLACES = 2
-
 # Enable authentation APIs
 
 CARDROOM_AUTH = True
-
-# # Disable authentation APIs
-#
-# CARDROOM_AUTH = False
 
 # Enable admin urls
 
 CARDROOM_ADMIN = True
 
-# # Disable admin urls
-#
-# CARDROOM_ADMIN = False
-
 # Enable felt
 
 CARDROOM_FELT = True
-
-# # Disable felt
-#
-# CARDROOM_FELT = False
-
-# # Configuration
-#
-# from cardroom.felt import Configuration
-#
-# CARDROOM_CONFIGURATION = Configuration(...)

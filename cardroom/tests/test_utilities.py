@@ -1,12 +1,12 @@
+from datetime import datetime
 from math import inf
+import builtins
 
 from django.conf import settings
 from django.test import SimpleTestCase
 from django.test.utils import override_settings
 
-_divmod = divmod
-
-from cardroom.utilities import (  # noqa: E402
+from cardroom.utilities import (
     divmod,
     get_admin,
     get_decimal_places,
@@ -14,6 +14,7 @@ from cardroom.utilities import (  # noqa: E402
     get_felt,
     get_parse_value,
     parse_value,
+    serialize
 )
 
 
@@ -27,7 +28,7 @@ class UtilitiesTestCase(SimpleTestCase):
         self.assertEqual(get_divmod()(8, 3), (2, 2))
         self.assertEqual(get_parse_value()('0'), 0)
         self.assertEqual(get_parse_value()('1.25'), 1)
-        self.assertEqual(get_parse_value()(str(8 / 3)), 2)
+        self.assertEqual(get_parse_value()(str(8 / 3)), 3)
 
     @override_settings(CARDROOM_DECIMAL_PLACES=2)
     def test_two_decimal_places(self) -> None:
@@ -80,7 +81,7 @@ class UtilitiesTestCase(SimpleTestCase):
             CARDROOM_FELT=True,
     )
     def test_non_defaults_0(self) -> None:
-        self.assertIs(get_divmod(), _divmod)
+        self.assertIs(get_divmod(), builtins.divmod)
         self.assertIs(get_parse_value(), int)
         self.assertEqual(get_decimal_places(), 0)
         self.assertTrue(get_admin())
@@ -113,3 +114,11 @@ class UtilitiesTestCase(SimpleTestCase):
         self.assertEqual(get_decimal_places(), inf)
         self.assertFalse(get_admin())
         self.assertFalse(get_felt())
+
+    def test_serialize(self) -> None:
+        dt = datetime.now()
+
+        self.assertEqual(
+            serialize({3: [1, {1}, dt], dt: False}),
+            {3: [1, [1], dt.isoformat()], dt.isoformat(): False},
+        )

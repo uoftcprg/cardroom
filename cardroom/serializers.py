@@ -1,3 +1,5 @@
+from typing import cast
+
 from rest_framework.request import Request
 from rest_framework.serializers import (
     HyperlinkedModelSerializer,
@@ -11,19 +13,7 @@ from cardroom.utilities import get_felt
 class CardroomHyperlinkedModelSerializer(HyperlinkedModelSerializer):
     @property
     def request(self) -> Request:
-        return self.context['request']
-
-
-class PokerSerializer(CardroomHyperlinkedModelSerializer):
-    class Meta:
-        model = Poker
-        fields = '__all__'
-
-
-class TableSerializer(CardroomHyperlinkedModelSerializer):
-    class Meta:
-        model = Table
-        fields = '__all__'
+        return cast(Request, self.context['request'])
 
 
 class CashGameSerializer(CardroomHyperlinkedModelSerializer):
@@ -72,4 +62,16 @@ class HandHistorySerializer(CardroomHyperlinkedModelSerializer):
 
     class Meta:
         model = HandHistory
+        fields = '__all__'
+
+
+class PokerSerializer(CardroomHyperlinkedModelSerializer):
+    class Meta:
+        model = Poker
+        fields = '__all__'
+
+
+class TableSerializer(CardroomHyperlinkedModelSerializer):
+    class Meta:
+        model = Table
         fields = '__all__'

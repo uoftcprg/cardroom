@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from typing import Any
 
 from django.http import JsonResponse
@@ -12,54 +11,54 @@ from cardroom.serializers import (
     PokerSerializer,
     TableSerializer,
 )
-from cardroom.utilities import get_configuration, serialize
+from cardroom.utilities import get_style, serialize
 
 
-class PokerViewSet(ModelViewSet):
-    queryset = Poker.objects.all()
-    serializer_class = PokerSerializer
-
-
-class TableViewSet(ModelViewSet):
-    queryset = Table.objects.all()
-    serializer_class = TableSerializer
-
-
-class CashGameViewSet(ModelViewSet):
+class CashGameViewSet(ModelViewSet):  # type: ignore[type-arg]
     queryset = CashGame.objects.all()
     serializer_class = CashGameSerializer
 
 
-class HandHistoryViewSet(ModelViewSet):
+class HandHistoryViewSet(ModelViewSet):  # type: ignore[type-arg]
     queryset = HandHistory.objects.all()
     serializer_class = HandHistorySerializer
 
 
-class CashGameFeltView(DetailView):
+class PokerViewSet(ModelViewSet):  # type: ignore[type-arg]
+    queryset = Poker.objects.all()
+    serializer_class = PokerSerializer
+
+
+class TableViewSet(ModelViewSet):  # type: ignore[type-arg]
+    queryset = Table.objects.all()
+    serializer_class = TableSerializer
+
+
+class CashGameFeltView(DetailView):  # type: ignore[type-arg]
     model = CashGame
     template_name = 'cardroom/cashgame_felt.html'
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        context['configuration'] = asdict(get_configuration())
-        context['frame'] = asdict(self.object.get_frame(self.request.user))
+        context['style'] = serialize(get_style())
+        context['frame'] = serialize(self.object.get_frame(self.request.user))
 
         return context
 
 
-class HandHistoryFeltView(DetailView):
+class HandHistoryFeltView(DetailView):  # type: ignore[type-arg]
     model = HandHistory
     template_name = 'cardroom/handhistory_felt.html'
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        context['configuration'] = asdict(get_configuration())
+        context['style'] = serialize(get_style())
         context['frames'] = serialize(self.object.frames)
 
         return context
 
 
-class CashGameFrameView(DetailView):
+class CashGameFrameView(DetailView):  # type: ignore[type-arg]
     model = CashGame
 
     def render_to_response(
@@ -67,10 +66,13 @@ class CashGameFrameView(DetailView):
             context: dict[str, Any],
             **response_kwargs: Any,
     ) -> JsonResponse:
-        return JsonResponse(asdict(self.object.get_frame(self.request.user)))
+        return JsonResponse(
+            serialize(self.object.get_frame(self.request.user)),
+            safe=False,
+        )
 
 
-class HandHistoryFramesView(DetailView):
+class HandHistoryFramesView(DetailView):  # type: ignore[type-arg]
     model = HandHistory
 
     def render_to_response(

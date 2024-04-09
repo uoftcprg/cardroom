@@ -54,7 +54,7 @@ setup(
         'channels[daphne]>=4.0.0,<5',
         'Django>=4.2.9,<5',
         'djangorestframework>=3.14.0,<4',
-        'pokerkit~=0.4.10',
+        'pokerkit~=0.4.17',
     ],
     python_requires='>=3.11',
     package_data={'cardroom': ['py.typed', 'static/**/*', 'templates/**/*']},

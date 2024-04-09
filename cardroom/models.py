@@ -14,7 +14,8 @@ from pokerkit import Automation, ValuesLike
 import pokerkit
 
 from cardroom.apps import CardroomConfig
-from cardroom.felt import Frame
+from cardroom.frame import Frame
+from cardroom.gamemaster import Gamemaster
 from cardroom.utilities import (
     get_divmod,
     get_felt,
@@ -145,9 +146,7 @@ class CashGame(Controller):
     table = models.ForeignKey(Table, models.PROTECT)
 
     def get_frame(self, user: AbstractUser) -> Frame:
-        from cardroom.consumers import get_frames
-
-        frames = get_frames(self)
+        frames = Gamemaster.get_frames(self.group_name)
 
         return frames.get(user.username, frames[''])
 
@@ -194,8 +193,6 @@ class CashGame(Controller):
             return self.get_felt_url()
 
     def load(self) -> controller.CashGame:
-        from cardroom.consumers import broadcast
-
         return controller.CashGame(
             self.time_bank,
             self.time_bank_increment,
@@ -205,7 +202,7 @@ class CashGame(Controller):
             self.standing_pat_timeout,
             self.betting_timeout,
             self.hole_cards_showing_or_mucking_timeout,
-            partial(broadcast, self),
+            partial(Gamemaster.broadcast, self),
             get_parse_value(),
             get_tzinfo(),
             self.table.load(),

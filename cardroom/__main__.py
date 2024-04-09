@@ -1,4 +1,4 @@
-from cardroom.main import main
+from django.core.management import execute_from_command_line
 
 if __name__ == '__main__':
-    main()  # pragma: no cover
+    execute_from_command_line()  # pragma: no cover

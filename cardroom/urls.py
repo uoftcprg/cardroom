@@ -18,7 +18,14 @@ from cardroom.views import (
 
 app_name: str = CardroomConfig.name
 router: DefaultRouter = DefaultRouter()
+
+router.register('cash-games', CashGameViewSet)
+router.register('hand-histories', HandHistoryViewSet)
+router.register('games', PokerViewSet)
+router.register('tables', TableViewSet)
+
 urlpatterns: list[URLPattern | URLResolver] = [
+    path('', include(router.urls)),
     path(
         'cash-games/<int:pk>/frame/',
         CashGameFrameView.as_view(),
@@ -30,11 +37,6 @@ urlpatterns: list[URLPattern | URLResolver] = [
         name='handhistory_frames',
     ),
 ]
-
-router.register('poker', PokerViewSet)
-router.register('tables', TableViewSet)
-router.register('cash-games', CashGameViewSet)
-router.register('hand-histories', HandHistoryViewSet)
 
 if get_auth():
     urlpatterns.append(path('auth/', include('rest_framework.urls')))
@@ -58,5 +60,3 @@ if get_felt():
             name='handhistory_felt',
         ),
     )
-
-urlpatterns.append(path('', include(router.urls)))

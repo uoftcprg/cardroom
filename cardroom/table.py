@@ -133,6 +133,12 @@ class Table:
         return range(self.seat_count)
 
     @property
+    def empty_seat_indices(self) -> Iterator[int]:
+        for seat in self.seats:
+            if not seat.user_status:
+                yield seat.index
+
+    @property
     def user_indices(self) -> Iterator[int]:
         for seat in self.seats:
             if seat.user_status:
@@ -186,20 +192,10 @@ class Table:
                 yield seat.user
 
     @property
-    def acting_seat(self) -> Seat | None:
+    def turn_seat(self) -> Seat | None:
         if self.state is not None:
             for seat in self.seats:
-                if (
-                        seat.player_status
-                        and (
-                            (
-                                seat.player_index
-                                == self.state.stander_pat_or_discarder_index
-                            )
-                            or seat.player_index == self.state.actor_index
-                            or seat.player_index == self.state.showdown_index
-                        )
-                ):
+                if seat.player_index == self.state.turn_index:
                     return seat
 
         return None
@@ -319,12 +315,12 @@ class Table:
                 raise ValueError('user already joined')
 
         if seat_index is None:
-            if len(tuple(self.users)) == self.seat_count:
+            if not tuple(self.empty_seat_indices):
                 raise ValueError('full table')
         else:
             if seat_index not in self.seat_indices:
                 raise ValueError('invalid seat index')
-            elif self.seats[seat_index].user_status:
+            elif seat_index not in tuple(self.empty_seat_indices):
                 raise ValueError('seat occupied')
 
     def can_join(self, user: str, seat_index: int | None = None) -> bool:
