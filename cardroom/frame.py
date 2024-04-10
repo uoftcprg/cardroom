@@ -21,7 +21,7 @@ class Seat:
     bet: int | None
     stack: int | None
     hole: tuple[Card, ...]
-    timeout: tuple[()] | tuple[datetime] | tuple[datetime, datetime]
+    timestamp: tuple[()] | tuple[datetime] | tuple[datetime, datetime]
     active: bool
     turn: bool
 
@@ -29,7 +29,7 @@ class Seat:
     def from_table(
             cls,
             table: Table,
-            timeout: tuple[()] | tuple[datetime] | tuple[datetime, datetime],
+            timestamp: tuple[()] | tuple[datetime] | tuple[datetime, datetime],
     ) -> dict[str, tuple[Seat, ...]]:
         seats: dict[str, list[Seat]] = {
             user: [] for user in chain(table.users, ('',))
@@ -60,18 +60,13 @@ class Seat:
                 )
                 turn = seat is table.turn_seat
 
-            if turn:
-                timeout_aux = timeout
-            else:
-                timeout_aux = ()
-
             uncensored_seat = Seat(
                 user=user,
                 button=button,
                 bet=bet,
                 stack=stack,
                 hole=hole,
-                timeout=timeout_aux,
+                timestamp=timestamp if turn else (),
                 active=active,
                 turn=turn,
             )
@@ -87,7 +82,7 @@ class Seat:
             cls,
             hand_history: HandHistory,
     ) -> Iterator[tuple[Seat, ...]]:
-        timeout = ()
+        timestamp = ()
         active = True
 
         for state in hand_history:
@@ -110,7 +105,7 @@ class Seat:
                     bet=bet,
                     stack=stack,
                     hole=hole,
-                    timeout=timeout,
+                    timestamp=timestamp,
                     active=active,
                     turn=turn,
                 )
@@ -173,7 +168,7 @@ class Action:
             else:
                 brtr = None
 
-            if table.turn_seat is table.get_seat(user):
+            if table.turn_seat is table.get_seat(user) is not None:
                 assert table.state is not None
 
                 sd = table.state.can_stand_pat_or_discard() or None
@@ -277,9 +272,9 @@ class Frame:
     def from_table(
             cls,
             table: Table,
-            timeout: tuple[()] | tuple[datetime] | tuple[datetime, datetime],
+            timestamp: tuple[()] | tuple[datetime] | tuple[datetime, datetime],
     ) -> dict[str, Frame]:
-        seats = Seat.from_table(table, timeout)
+        seats = Seat.from_table(table, timestamp)
         pot: tuple[int, ...]
         board: tuple[Card, ...]
 

@@ -13,7 +13,6 @@ from cardroom.views import (
     HandHistoryFramesView,
     HandHistoryViewSet,
     PokerViewSet,
-    TableViewSet,
 )
 
 app_name: str = CardroomConfig.name
@@ -22,7 +21,6 @@ router: DefaultRouter = DefaultRouter()
 router.register('cash-games', CashGameViewSet)
 router.register('hand-histories', HandHistoryViewSet)
 router.register('games', PokerViewSet)
-router.register('tables', TableViewSet)
 
 urlpatterns: list[URLPattern | URLResolver] = [
     path('', include(router.urls)),

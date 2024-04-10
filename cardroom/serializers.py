@@ -6,7 +6,7 @@ from rest_framework.serializers import (
     SerializerMethodField,
 )
 
-from cardroom.models import CashGame, HandHistory, Poker, Table
+from cardroom.models import CashGame, HandHistory, Poker
 from cardroom.utilities import get_felt
 
 
@@ -68,10 +68,4 @@ class HandHistorySerializer(CardroomHyperlinkedModelSerializer):
 class PokerSerializer(CardroomHyperlinkedModelSerializer):
     class Meta:
         model = Poker
-        fields = '__all__'
-
-
-class TableSerializer(CardroomHyperlinkedModelSerializer):
-    class Meta:
-        model = Table
         fields = '__all__'

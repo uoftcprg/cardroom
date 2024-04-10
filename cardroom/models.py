@@ -115,22 +115,11 @@ class Poker(models.Model):
         verbose_name_plural = 'poker'
 
 
-class Table(models.Model):
+class Controller(models.Model):
     game = models.ForeignKey(Poker, models.PROTECT)
     seat_count = models.PositiveBigIntegerField()
-    min_starting_stack = models.JSONField(blank=True, null=True)
-    max_starting_stack = models.JSONField(blank=True, null=True)
-
-    def load(self) -> table.Table:
-        return table.Table(
-            self.game.load(),
-            self.seat_count,
-            self.min_starting_stack,
-            self.max_starting_stack,
-        )
-
-
-class Controller(models.Model):
+    min_starting_stack = models.JSONField()
+    max_starting_stack = models.JSONField()
     time_bank = models.FloatField()
     time_bank_increment = models.FloatField()
     state_construction_timeout = models.FloatField()
@@ -148,13 +137,19 @@ class Controller(models.Model):
     def load(self) -> controllers.Controller:
         pass
 
+    def load_table(self) -> table.Table:
+        return table.Table(
+            self.game.load(),
+            self.seat_count,
+            self.min_starting_stack,
+            self.max_starting_stack,
+        )
+
     class Meta:
         abstract = True
 
 
 class CashGame(Controller):
-    table = models.ForeignKey(Table, models.PROTECT)
-
     def get_frames(self) -> dict[str, Frame]:
         return Gamemaster.get_frames(self.group_name)
 
@@ -210,10 +205,10 @@ class CashGame(Controller):
             self.standing_pat_timeout,
             self.betting_timeout,
             self.hole_cards_showing_or_mucking_timeout,
-            partial(Gamemaster.broadcast, self),
+            partial(Gamemaster.broadcast, self.group_name),
             get_parse_value(),
             get_tzinfo(),
-            self.table.load(),
+            self.load_table(),
         )
 
 

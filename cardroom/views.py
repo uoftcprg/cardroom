@@ -4,12 +4,11 @@ from django.http import JsonResponse
 from django.views.generic import DetailView
 from rest_framework.viewsets import ModelViewSet
 
-from cardroom.models import CashGame, HandHistory, Poker, Table
+from cardroom.models import CashGame, HandHistory, Poker
 from cardroom.serializers import (
     CashGameSerializer,
     HandHistorySerializer,
     PokerSerializer,
-    TableSerializer,
 )
 from cardroom.utilities import get_style, serialize
 
@@ -27,11 +26,6 @@ class HandHistoryViewSet(ModelViewSet):  # type: ignore[type-arg]
 class PokerViewSet(ModelViewSet):  # type: ignore[type-arg]
     queryset = Poker.objects.all()
     serializer_class = PokerSerializer
-
-
-class TableViewSet(ModelViewSet):  # type: ignore[type-arg]
-    queryset = Table.objects.all()
-    serializer_class = TableSerializer
 
 
 class CashGameFeltView(DetailView):  # type: ignore[type-arg]

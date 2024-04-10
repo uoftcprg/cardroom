@@ -173,7 +173,16 @@ class Controller(ABC):
 
             return event
 
+        turn_dt: datetime | None = None
+
         def append_frames() -> None:
+            nonlocal turn_dt
+
+            if table.state is None or table.state.turn_index is None:
+                turn_dt = None
+            elif turn_dt is None:
+                turn_dt = get_present_dt()
+
             auto_dt = min_or_none(
                 (
                     standing_pat_dt,
@@ -191,18 +200,6 @@ class Controller(ABC):
                 timeout = turn_dt, auto_dt
 
             frames.append(Frame.from_table(table, timeout))
-
-        turn_dt: datetime | None = None
-
-        def synchronize_state_update() -> None:
-            nonlocal turn_dt
-
-            if table.state is None or table.state.turn_index is None:
-                turn_dt = None
-            elif turn_dt is None:
-                turn_dt = get_present_dt()
-
-            append_frames()
 
         def get_time_bank(user: str) -> float:
             time_banks.setdefault(user, self.time_bank)

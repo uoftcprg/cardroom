@@ -1,11 +1,12 @@
 from pickle import dumps
 from textwrap import dedent
+from unittest.mock import MagicMock
 
 from django.test import TestCase
 from pokerkit import Automation, NoLimitShortDeckHoldem, NoLimitTexasHoldem
 import pokerkit
 
-from cardroom.models import Poker, Table, HandHistory
+from cardroom.models import Controller, HandHistory, Poker
 from cardroom.utilities import get_divmod
 import cardroom.table as table
 
@@ -85,22 +86,23 @@ class PokerTestCase(PickleTestCaseMixin, TestCase):
         )
 
 
-class TableTestCase(PickleTestCaseMixin, TestCase):
-    def test_load(self) -> None:
+class ControllerTestCase(PickleTestCaseMixin, TestCase):
+    def test_load_table(self) -> None:
         game = Poker.objects.create(
             variant='NT',
             raw_antes={1: 3},
             raw_blinds_or_straddles=[1, 2],
             min_bet=2,
         )
+        controller = MagicMock(
+            game=game,
+            seat_count=6,
+            min_starting_stack=80,
+            max_starting_stack=200,
+        )
 
         self.assertPickleEqual(
-            Table.objects.create(
-                game=game,
-                seat_count=6,
-                min_starting_stack=80,
-                max_starting_stack=200,
-            ).load(),
+            Controller.load_table(controller),
             table.Table(
                 NoLimitTexasHoldem(
                     Poker.automations,
