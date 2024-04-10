@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from abc import abstractmethod
+from collections.abc import Iterator, Mapping
 from dataclasses import fields
 from functools import partial
 from typing import Any, ClassVar
 
-from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import models
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 from django.urls import NoReverseMatch, reverse
 from django.utils.translation import gettext_lazy as _
 from pokerkit import Automation, ValuesLike
@@ -23,7 +25,7 @@ from cardroom.utilities import (
     get_root_routingconf,
     get_tzinfo,
 )
-import cardroom.controller as controller
+import cardroom.controllers as controllers
 import cardroom.table as table
 
 
@@ -66,8 +68,8 @@ class Poker(models.Model):
 
     def load(self) -> pokerkit.Poker:
 
-        def clean(raw_values: ValuesLike) -> ValuesLike:
-            if isinstance(raw_values, dict):
+        def clean_if_mapping(raw_values: ValuesLike) -> ValuesLike:
+            if isinstance(raw_values, Mapping):
                 raw_values = dict(
                     zip(map(int, raw_values.keys()), raw_values.values()),
                 )
@@ -77,8 +79,10 @@ class Poker(models.Model):
         kwargs = {
             'automations': self.automations,
             'ante_trimming_status': self.ante_trimming_status,
-            'raw_antes': clean(self.raw_antes),
-            'raw_blinds_or_straddles': clean(self.raw_blinds_or_straddles),
+            'raw_antes': clean_if_mapping(self.raw_antes),
+            'raw_blinds_or_straddles': clean_if_mapping(
+                self.raw_blinds_or_straddles,
+            ),
             'bring_in': self.bring_in,
             'small_bet': self.small_bet,
             'big_bet': self.big_bet,
@@ -96,9 +100,11 @@ class Poker(models.Model):
         try:
             self.load()
         except KeyError:
-            raise ValidationError(f'invalid variant code {repr(self.variant)}')
+            raise ValidationError(
+                f'An invalid variant code {repr(self.variant)} was supplied.',
+            )
         except TypeError:
-            raise ValidationError('forbidden field supplied')
+            raise ValidationError('An invalid/forbidden field was supplied.')
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         self.full_clean()
@@ -138,6 +144,10 @@ class Controller(models.Model):
     def group_name(self) -> str:
         return f'{type(self).__name__}-{self.pk}'
 
+    @abstractmethod
+    def load(self) -> controllers.Controller:
+        pass
+
     class Meta:
         abstract = True
 
@@ -145,10 +155,8 @@ class Controller(models.Model):
 class CashGame(Controller):
     table = models.ForeignKey(Table, models.PROTECT)
 
-    def get_frame(self, user: AbstractUser) -> Frame:
-        frames = Gamemaster.get_frames(self.group_name)
-
-        return frames.get(user.username, frames[''])
+    def get_frames(self) -> dict[str, Frame]:
+        return Gamemaster.get_frames(self.group_name)
 
     def get_frame_url(self) -> str:
         try:
@@ -192,8 +200,8 @@ class CashGame(Controller):
         def get_absolute_url(self) -> str:
             return self.get_felt_url()
 
-    def load(self) -> controller.CashGame:
-        return controller.CashGame(
+    def load(self) -> controllers.CashGame:
+        return controllers.CashGame(
             self.time_bank,
             self.time_bank_increment,
             self.state_construction_timeout,
@@ -304,3 +312,27 @@ class HandHistory(models.Model):
 
     class Meta:
         verbose_name_plural = 'hand histories'
+
+
+@receiver(post_save, sender=CashGame)
+def controller_post_save(
+        sender: type[Controller],
+        instance: Controller,
+        created: bool,
+        **kwargs: Any,
+) -> None:
+    name = instance.group_name
+
+    if not created:
+        controllers.Controller.stop(name)
+
+    controllers.Controller.start(name, instance.load())
+
+
+@receiver(post_delete, sender=CashGame)
+def controller_post_delete(
+        sender: type[Controller],
+        instance: Controller,
+        **kwargs: Any,
+) -> None:
+    controllers.Controller.stop(instance.group_name)

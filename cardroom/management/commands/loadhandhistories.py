@@ -33,7 +33,7 @@ class Command(BaseCommand):
                     hh = HandHistory.load(file)
             except ValueError:
                 raise CommandError(
-                    f'failed to parse hand history file {repr(pathname)}',
+                    f'Failed to parse hand history file {repr(pathname)}.',
                 )
 
             models.HandHistory.dump(hh).save()

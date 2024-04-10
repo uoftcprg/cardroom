@@ -41,7 +41,8 @@ class CashGameFeltView(DetailView):  # type: ignore[type-arg]
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['style'] = serialize(get_style())
-        context['frame'] = serialize(self.object.get_frame(self.request.user))
+        frames = self.object.get_frames()
+        context['frame'] = serialize(frames.get(self.request.user, frames['']))
 
         return context
 
@@ -66,8 +67,10 @@ class CashGameFrameView(DetailView):  # type: ignore[type-arg]
             context: dict[str, Any],
             **response_kwargs: Any,
     ) -> JsonResponse:
+        frames = self.object.get_frames()
+
         return JsonResponse(
-            serialize(self.object.get_frame(self.request.user)),
+            serialize(frames.get(self.request.user, frames[''])),
             safe=False,
         )
 

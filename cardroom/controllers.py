@@ -1,3 +1,8 @@
+""":mod:`cardroom.table` implements classes related to poker tables.
+
+This module implements logic to control tables in real-time.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -5,10 +10,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from queue import Empty, Queue
-from threading import Thread, Lock
+from threading import RLock, Thread
 from traceback import print_exc
 from typing import Any, cast, ClassVar
-from warnings import warn
 from zoneinfo import ZoneInfo
 
 from django.dispatch import Signal
@@ -19,40 +23,70 @@ from cardroom.signals import post_state_construction, pre_state_destruction
 from cardroom.table import Table
 
 
-@dataclass
+@dataclass(frozen=True)
 class Controller(ABC):
-    lock: ClassVar[Lock] = Lock()
-    controllers: ClassVar[dict[str, Controller]] = {}
-    threads: ClassVar[dict[str, Thread]] = {}
+    """The class for real-time table(s) controllers."""
+
+    _lock: ClassVar[RLock] = RLock()
+    _controllers: ClassVar[dict[str, Controller]] = {}
+    _threads: ClassVar[dict[str, Thread]] = {}
 
     @classmethod
-    def set(cls, name: str, controller: Controller) -> None:
-        with cls.lock:
-            if name in cls.controllers:
-                cls.controllers[name].handle('', 'terminate')
-                cls.threads[name].join()
+    def start(cls, name: str, controller: Controller) -> None:
+        """Associate a name with a controller and start it.
 
-                cls.controllers.pop(name)
-                cls.threads.pop(name)
+        :param name: The controller name.
+        :param controller: The associated controller.
+        :return: ``None``.
+        """
+        with cls._lock:
+            if name in cls._controllers:
+                raise ValueError(
+                    (
+                        f'The name {name} has already been associated with a'
+                        ' running controller.'
+                    ),
+                )
 
-            assert name not in cls.controllers
-            assert name not in cls.threads
+            assert name not in cls._controllers
+            assert name not in cls._threads
 
             thread = Thread(target=controller.mainloop, daemon=True)
-            cls.controllers[name] = controller
-            cls.threads[name] = thread
+            cls._controllers[name] = controller
+            cls._threads[name] = thread
 
             thread.start()
 
     @classmethod
-    def get(cls, name: str) -> Controller:
-        with cls.lock:
-            return cls.controllers[name]
+    def stop(cls, name: str) -> Controller:
+        """Stop a controller.
+
+        :param name: The controller name.
+        :return: The stopped controller.
+        """
+        with cls._lock:
+            cls._controllers[name].handle('', 'terminate')
+            cls._threads[name].join()
+
+            controller = cls._controllers.pop(name)
+            cls._threads.pop(name)
+
+            return controller
+
+    @classmethod
+    def lookup(cls, name: str) -> Controller:
+        """Lookup a container with the associated name.
+
+        :param name: The controller name.
+        :return: The associated controller.
+        """
+        with cls._lock:
+            return cls._controllers[name]
 
     time_bank: float
     """The time bank."""
     time_bank_increment: float
-    """The time bank increment."""
+    """The time bank increment (per hand)."""
     state_construction_timeout: float
     """The state construction timeout."""
     state_destruction_timeout: float
@@ -74,49 +108,61 @@ class Controller(ABC):
 
     @abstractmethod
     def mainloop(self) -> None:
+        """Initiate the mainloop of the cash-game controller.
+
+        :return: ``None``.
+        """
         pass
 
     @abstractmethod
     def handle(self, user: str, event: Any) -> None:
+        """Handle the event initiated by a user.
+
+        If the user is system/superuser, the user should be represented
+        as an empty string ``''``.
+
+        By design, anonymous users should not be sending events.
+
+        :param user: The user who initiated the event.
+        :param event: The initiated event.
+        :return: ``None``.
+        """
         pass
 
     def _run(self, table: Table, queue: Queue[tuple[str, Any]]) -> None:
 
-        def get_now_timestamp() -> datetime:
+        def get_present_dt() -> datetime:
             return datetime.now(self.tzinfo)
 
-        def is_past_timestamp(timestamp: datetime | None) -> bool:
-            if timestamp is None:
+        def is_past(dt: datetime | None) -> bool:
+            if dt is None:
                 status = False
             else:
-                status = get_now_timestamp() >= timestamp
+                status = get_present_dt() >= dt
 
             return status
 
-        def get_future_timestamp(timeout: float) -> datetime:
-            return get_now_timestamp() + timedelta(seconds=timeout)
+        def get_future_dt(timeout: float) -> datetime:
+            return get_present_dt() + timedelta(seconds=timeout)
 
-        def get_auto_timestamp() -> datetime | None:
+        def get_auto_dt() -> datetime | None:
             return cast(
                 datetime | None,
                 min_or_none(
                     (
-                        state_construction_timestamp,
-                        state_destruction_timestamp,
-                        *idle_timestamps.values(),
-                        standing_pat_timestamp,
-                        betting_timestamp,
-                        hole_cards_showing_or_mucking_timestamp,
+                        state_construction_dt,
+                        state_destruction_dt,
+                        *idle_dts.values(),
+                        standing_pat_dt,
+                        betting_dt,
+                        hole_cards_showing_or_mucking_dt,
                     ),
                 ),
             )
 
         def get_event() -> tuple[str, Any] | None:
-            if (auto_timestamp := get_auto_timestamp()) is not None:
-                timeout = max(
-                    (auto_timestamp - get_now_timestamp()).total_seconds(),
-                    0,
-                )
+            if (auto_dt := get_auto_dt()) is not None:
+                timeout = max((auto_dt - get_present_dt()).total_seconds(), 0)
             else:
                 timeout = None
 
@@ -128,28 +174,56 @@ class Controller(ABC):
             return event
 
         def append_frames() -> None:
-            frames.append(Frame.from_table(table, ()))
+            auto_dt = min_or_none(
+                (
+                    standing_pat_dt,
+                    betting_dt,
+                    hole_cards_showing_or_mucking_dt,
+                ),
+            )
+            timeout: tuple[()] | tuple[datetime] | tuple[datetime, datetime]
+
+            if turn_dt is None:
+                timeout = ()
+            elif auto_dt is None or auto_dt < turn_dt:
+                timeout = (turn_dt,)
+            else:
+                timeout = turn_dt, auto_dt
+
+            frames.append(Frame.from_table(table, timeout))
+
+        turn_dt: datetime | None = None
+
+        def synchronize_state_update() -> None:
+            nonlocal turn_dt
+
+            if table.state is None or table.state.turn_index is None:
+                turn_dt = None
+            elif turn_dt is None:
+                turn_dt = get_present_dt()
+
+            append_frames()
 
         def get_time_bank(user: str) -> float:
             time_banks.setdefault(user, self.time_bank)
 
             return time_banks[user]
 
-        state_construction_timestamp = None
-        state_destruction_timestamp = None
-        idle_timestamps = dict[str, datetime | None]()
-        standing_pat_timestamp: datetime | None = None
-        betting_timestamp: datetime | None = None
-        hole_cards_showing_or_mucking_timestamp: datetime | None = None
+        status = True
 
         def parse_user_action() -> None:
-            nonlocal standing_pat_timestamp
-            nonlocal betting_timestamp
-            nonlocal hole_cards_showing_or_mucking_timestamp
+            nonlocal status
 
             tokens = action.split()
 
-            match tokens:
+            match user, tokens:
+                case 'terminate':
+                    if user:
+                        raise ValueError(
+                            f'The user {user} does not have the permission.',
+                        )
+
+                    status = False
                 case 'j', seat_index:
                     table.join(user, int(seat_index))
                 case ('l',):
@@ -164,22 +238,33 @@ class Controller(ABC):
                         self.parse_value(starting_stack),
                     )
                 case _:
-                    player_index = table.get_seat(user).player_index
+                    seat = table.get_seat(user)
+
+                    if seat is None:
+                        raise ValueError(f'The user {user} is not seated.')
+
+                    player_index = seat.player_index
 
                     if player_index is None:
-                        raise ValueError('player dne')
+                        raise ValueError(
+                            f'The user {user} is not involved in the hand.',
+                        )
 
                     player = f'p{player_index + 1}'
-
-                    if table.state is None:
-                        raise ValueError('state dne')
 
                     if 'sm' in (tokens := action.split()):
                         if '#' in tokens:
                             tokens = tokens[:tokens.index('#')]
 
-                        if tokens != ['sm'] or tokens != ['sm', '-']:
-                            raise ValueError('explicit showdown is forbidden')
+                        if tokens != ['sm'] and tokens != ['sm', '-']:
+                            raise ValueError(
+                                (
+                                    'Explicitly stating showdown is not'
+                                    ' permitted for security reasons.'
+                                ),
+                            )
+
+                    assert table.state is not None
 
                     parse_action(
                         table.state,
@@ -187,17 +272,15 @@ class Controller(ABC):
                         self.parse_value,
                     )
 
-                    standing_pat_timestamp = None
-                    betting_timestamp = None
-                    hole_cards_showing_or_mucking_timestamp = None
-
         def send_signal(signal: Signal) -> None:
-            signal.send(
-                None,
-                instance=None,
-                controller=self,
-                table=table,
-            )
+            signal.send(type(self), controller=self, table=table)
+
+        state_construction_dt = None
+        state_destruction_dt = None
+        idle_dts = dict[str, datetime | None]()
+        standing_pat_dt: datetime | None = None
+        betting_dt: datetime | None = None
+        hole_cards_showing_or_mucking_dt: datetime | None = None
 
         time_banks = dict[str, float]()
         frames = list[dict[str, Frame]]()
@@ -207,7 +290,7 @@ class Controller(ABC):
         self.callback(frames, users_message)
         frames.clear()
 
-        while True:
+        while status:
             user_action = get_event()
 
             if user_action is not None:
@@ -217,13 +300,20 @@ class Controller(ABC):
                     try:
                         parse_user_action()
                     except ValueError as exception:
-                        users_message = [user], str(exception)
-
-                        print_exc()
+                        if user:
+                            users_message = [user], str(exception)
+                        else:
+                            print_exc()
                     else:
                         append_frames()
                 else:
-                    warn('cannot handle event')
+                    if user:
+                        users_message = (
+                            [user],
+                            f'An error occurred when handling {repr(action)}.',
+                        )
+                    else:
+                        print_exc()
 
             frame_count = None
 
@@ -233,23 +323,27 @@ class Controller(ABC):
                 for user in table.users:
                     seat = table.get_seat(user)
 
+                    assert seat is not None
+
                     if (
                             table.state is not None
                             and not seat.player_status
+                            and not seat.ready_or_postable_status
+                            and not seat.wait_status
                             and table.can_sit_out(user)
                     ):
                         table.sit_out(user)
 
-                    status = is_past_timestamp(idle_timestamps.get(user))
+                    status = is_past(idle_dts.get(user))
 
                     if (
                             status
                             or seat.active_status
                             or not table.can_leave(user)
                     ):
-                        idle_timestamps[user] = None
-                    elif idle_timestamps.get(user) is None:
-                        idle_timestamps[user] = get_future_timestamp(
+                        idle_dts[user] = None
+                    elif idle_dts.get(user) is None:
+                        idle_dts[user] = get_future_dt(
                             self.idle_timeout,
                         )
 
@@ -261,12 +355,12 @@ class Controller(ABC):
                         table.leave(user)
                         append_frames()
 
-                status = is_past_timestamp(state_construction_timestamp)
+                status = is_past(state_construction_dt)
 
                 if status or not table.can_construct_state():
-                    state_construction_timestamp = None
-                elif state_construction_timestamp is None:
-                    state_construction_timestamp = get_future_timestamp(
+                    state_construction_dt = None
+                elif state_construction_dt is None:
+                    state_construction_dt = get_future_dt(
                         self.state_construction_timeout,
                     )
 
@@ -275,20 +369,20 @@ class Controller(ABC):
                     send_signal(post_state_construction)
                     append_frames()
 
-                status = is_past_timestamp(state_destruction_timestamp)
+                status = is_past(state_destruction_dt)
 
                 if status or not table.can_destroy_state():
-                    state_destruction_timestamp = None
-                elif state_destruction_timestamp is None:
-                    state_destruction_timestamp = get_future_timestamp(
+                    state_destruction_dt = None
+                elif state_destruction_dt is None:
+                    state_destruction_dt = get_future_dt(
                         self.state_destruction_timeout,
                     )
 
                 if status and table.can_destroy_state():
-                    for key, value in time_banks.items():
-                        time_banks[key] = min(
+                    for user in table.users:
+                        time_banks[user] = min(
                             self.time_bank,
-                            value + self.time_bank_increment,
+                            get_time_bank(user) + self.time_bank_increment,
                         )
 
                     send_signal(pre_state_destruction)
@@ -296,9 +390,9 @@ class Controller(ABC):
                     append_frames()
 
                 if table.state is None:
-                    standing_pat_timestamp = None
-                    betting_timestamp = None
-                    hole_cards_showing_or_mucking_timestamp = None
+                    standing_pat_dt = None
+                    betting_dt = None
+                    hole_cards_showing_or_mucking_dt = None
                 else:
                     if (
                             table.turn_seat is not None
@@ -343,12 +437,12 @@ class Controller(ABC):
                     if status:
                         append_frames()
 
-                    status = is_past_timestamp(standing_pat_timestamp)
+                    status = is_past(standing_pat_dt)
 
                     if status or not table.state.can_stand_pat_or_discard():
-                        standing_pat_timestamp = None
+                        standing_pat_dt = None
                     else:
-                        standing_pat_timestamp = get_future_timestamp(
+                        standing_pat_dt = get_future_dt(
                             self.standing_pat_timeout,
                         )
 
@@ -356,12 +450,12 @@ class Controller(ABC):
                         table.state.stand_pat_or_discard()
                         append_frames()
 
-                    status = is_past_timestamp(betting_timestamp)
+                    status = is_past(betting_dt)
 
                     if status or table.state.actor_index is None:
-                        betting_timestamp = None
+                        betting_dt = None
                     else:
-                        betting_timestamp = get_future_timestamp(
+                        betting_dt = get_future_dt(
                             self.betting_timeout,
                         )
 
@@ -377,15 +471,13 @@ class Controller(ABC):
 
                         append_frames()
 
-                    status = is_past_timestamp(
-                        hole_cards_showing_or_mucking_timestamp,
-                    )
+                    status = is_past(hole_cards_showing_or_mucking_dt)
 
                     if status or not table.state.can_show_or_muck_hole_cards():
-                        hole_cards_showing_or_mucking_timestamp = None
-                    elif hole_cards_showing_or_mucking_timestamp is None:
-                        hole_cards_showing_or_mucking_timestamp = (
-                            get_future_timestamp(
+                        hole_cards_showing_or_mucking_dt = None
+                    elif hole_cards_showing_or_mucking_dt is None:
+                        hole_cards_showing_or_mucking_dt = (
+                            get_future_dt(
                                 self.hole_cards_showing_or_mucking_timeout,
                             )
                         )
@@ -394,32 +486,34 @@ class Controller(ABC):
                         table.state.show_or_muck_hole_cards()
                         append_frames()
 
-            for user in set(idle_timestamps) - set(table.users):
-                idle_timestamps.pop(user)
+            for user in set(idle_dts) - set(table.users):
+                idle_dts.pop(user)
 
             for user in set(time_banks) - set(table.users):
                 time_banks.pop(user)
 
-            # TODO: send over
-            # timestamp = get_now_timestamp()
-            # auto_timestamp = get_auto_timestamp()
-
-            if frames or users_message is not None:
-                self.callback(frames, users_message)
-
+            self.callback(frames, users_message)
             frames.clear()
+
             users_message = [], ''
 
 
-@dataclass
+@dataclass(frozen=True)
 class CashGame(Controller):
-    table: Table
-    """The table."""
-    queue: Queue[tuple[str, Any]] = field(default_factory=Queue, init=False)
-    """The queue."""
+    """The class for cash-game controllers.
+
+    For this type of controller, each controller is associated with just
+    a table.
+    """
+
+    _table: Table
+    _queue: Queue[tuple[str, Any]] = field(
+        default_factory=Queue,
+        init=False,
+    )
 
     def mainloop(self) -> None:
-        self._run(self.table, self.queue)
+        self._run(self._table, self._queue)
 
     def handle(self, user: str, event: Any) -> None:
-        self.queue.put((user, event))
+        self._queue.put((user, event))

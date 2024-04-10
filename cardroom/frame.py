@@ -37,18 +37,21 @@ class Seat:
 
         for seat in table.seats:
             user = seat.user or ''
-            button = seat.index == table.button.seat_index
+            button = seat is table.button.seat
             active = seat.active_status
             hole: tuple[Card, ...]
             censored_hole: tuple[Card, ...]
 
-            if seat.player_index is None or table.state is None:
+            if not seat.player_status:
                 bet = None
                 stack = seat.starting_stack
                 hole = ()
                 censored_hole = ()
                 turn = False
             else:
+                assert table.state is not None
+                assert seat.player_index is not None
+
                 bet = table.state.bets[seat.player_index]
                 stack = table.state.stacks[seat.player_index]
                 hole = tuple(table.state.hole_cards[seat.player_index])
@@ -118,19 +121,19 @@ class Seat:
 
 
 @dataclass(frozen=True)
-class Variant:
+class Game:
     _: KW_ONLY
     hole: tuple[tuple[bool, ...], ...]
     board: tuple[int, ...]
     draw: tuple[bool, ...]
 
     @classmethod
-    def from_game(cls, game: Poker) -> Variant:
+    def from_game(cls, game: Poker) -> Game:
         hole = tuple(street.hole_dealing_statuses for street in game.streets)
         board = tuple(street.board_dealing_count for street in game.streets)
         draw = tuple(street.draw_status for street in game.streets)
 
-        return Variant(hole=hole, board=board, draw=draw)
+        return Game(hole=hole, board=board, draw=draw)
 
 
 @dataclass(frozen=True)
@@ -154,7 +157,7 @@ class Action:
 
         for user in chain(table.users, ('',)):
             if table.can_join(user):
-                j = tuple(table.empty_seat_indices)
+                j = tuple(seat.index for seat in table.empty_seats)
             else:
                 j = None
 
@@ -170,7 +173,7 @@ class Action:
             else:
                 brtr = None
 
-            if table.turn_seat is table.get_seat_or_none(user):
+            if table.turn_seat is table.get_seat(user):
                 assert table.state is not None
 
                 sd = table.state.can_stand_pat_or_discard() or None
@@ -266,7 +269,7 @@ class Frame:
     seats: tuple[Seat, ...]
     pot: tuple[int, ...]
     board: tuple[Card, ...]
-    variant: Variant
+    game: Game
     action: Action
     history: str
 
@@ -287,7 +290,7 @@ class Frame:
             pot = tuple(pot.amount for pot in table.state.pots)
             board = tuple(table.state.board_cards)
 
-        variant = Variant.from_game(table.game)
+        game = Game.from_game(table.game)
         actions = Action.from_table(table)
 
         if table.state is None:
@@ -309,7 +312,7 @@ class Frame:
                 seats=seats[user],
                 pot=pot,
                 board=board,
-                variant=variant,
+                game=game,
                 action=actions[user],
                 history=history,
             )
@@ -318,8 +321,7 @@ class Frame:
 
     @classmethod
     def from_hand_history(cls, hand_history: HandHistory) -> Iterator[Frame]:
-        game = hand_history.create_game()
-        variant = Variant.from_game(game)
+        game = Game.from_game(hand_history.create_game())
         action = Action.create_empty()
         history = hand_history.dumps()
 
@@ -334,7 +336,7 @@ class Frame:
                 seats=seats,
                 pot=pot,
                 board=board,
-                variant=variant,
+                game=game,
                 action=action,
                 history=history,
             )

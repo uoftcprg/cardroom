@@ -1,20 +1,12 @@
-from warnings import resetwarnings, simplefilter
+from typing import cast
 
 from django.test import SimpleTestCase
 from pokerkit import FixedLimitRazz, NoLimitTexasHoldem, State
 
-from cardroom.table import Table
+from cardroom.table import Seat, Table
 
 
 class TableTestCase(SimpleTestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        simplefilter('ignore')
-
-    @classmethod
-    def tearDownClass(cls) -> None:
-        resetwarnings()
-
     def create_nt_table(self) -> Table:
         return Table(
             NoLimitTexasHoldem((), False, {1: 3}, [1, 2], 2),
@@ -106,8 +98,8 @@ class TableTestCase(SimpleTestCase):
 
         assert table.state is not None
 
-        u0_indices.add(table.get_seat('u0').player_index)
-        u2_indices.add(table.get_seat('u2').player_index)
+        u0_indices.add(cast(Seat, table.get_seat('u0')).player_index)
+        u2_indices.add(cast(Seat, table.get_seat('u2')).player_index)
         self.assertEqual(table.state.starting_stacks, (200,) * 2)
         self.assertEqual(table.state.player_count, 2)
         self.assertFalse(table.can_destroy_state())
@@ -119,8 +111,8 @@ class TableTestCase(SimpleTestCase):
 
         assert table.state is not None
 
-        u0_indices.add(table.get_seat('u0').player_index)
-        u2_indices.add(table.get_seat('u2').player_index)
+        u0_indices.add(cast(Seat, table.get_seat('u0')).player_index)
+        u2_indices.add(cast(Seat, table.get_seat('u2')).player_index)
         self.assertNotEqual(table.state.starting_stacks, (200,) * 2)
         self.assertEqual(table.state.player_count, 2)
         table.buy_rebuy_top_off_or_rat_hole('u2', 200)
@@ -132,8 +124,8 @@ class TableTestCase(SimpleTestCase):
 
         assert table.state is not None
 
-        u0_indices.add(table.get_seat('u0').player_index)
-        u2_indices.add(table.get_seat('u2').player_index)
+        u0_indices.add(cast(Seat, table.get_seat('u0')).player_index)
+        u2_indices.add(cast(Seat, table.get_seat('u2')).player_index)
         self.terminate(table.state)
         table.destroy_state()
 
@@ -141,8 +133,8 @@ class TableTestCase(SimpleTestCase):
 
         assert table.state is not None
 
-        u0_indices.add(table.get_seat('u0').player_index)
-        u2_indices.add(table.get_seat('u2').player_index)
+        u0_indices.add(cast(Seat, table.get_seat('u0')).player_index)
+        u2_indices.add(cast(Seat, table.get_seat('u2')).player_index)
         self.assertEqual(table.state.player_count, 4)
         self.terminate(table.state)
         table.buy_rebuy_top_off_or_rat_hole('u0', 200)
@@ -158,8 +150,8 @@ class TableTestCase(SimpleTestCase):
         assert table.state is not None
 
         table.buy_rebuy_top_off_or_rat_hole('u0', 100)
-        u0_indices.add(table.get_seat('u0').player_index)
-        u2_indices.add(table.get_seat('u2').player_index)
+        u0_indices.add(cast(Seat, table.get_seat('u0')).player_index)
+        u2_indices.add(cast(Seat, table.get_seat('u2')).player_index)
         self.assertEqual(table.state.starting_stacks, (200,) * 4)
         self.terminate(table.state)
         table.destroy_state()
@@ -182,10 +174,10 @@ class TableTestCase(SimpleTestCase):
 
         assert table.state is not None
 
-        self.assertEqual(table.get_seat('u0').player_index, 0)
-        self.assertEqual(table.get_seat('u1').player_index, 1)
-        self.assertEqual(table.get_seat('u2').player_index, None)
-        self.assertEqual(table.get_seat('u3').player_index, None)
+        self.assertIs(cast(Seat, table.get_seat('u0')).player_index, 0)
+        self.assertIs(cast(Seat, table.get_seat('u1')).player_index, 1)
+        self.assertIs(cast(Seat, table.get_seat('u2')).player_index, None)
+        self.assertIs(cast(Seat, table.get_seat('u3')).player_index, None)
         self.terminate(table.state)
         table.destroy_state()
 
@@ -193,10 +185,10 @@ class TableTestCase(SimpleTestCase):
 
         assert table.state is not None
 
-        self.assertEqual(table.get_seat('u0').player_index, 0)
-        self.assertEqual(table.get_seat('u1').player_index, 1)
-        self.assertEqual(table.get_seat('u2').player_index, None)
-        self.assertEqual(table.get_seat('u3').player_index, None)
+        self.assertIs(cast(Seat, table.get_seat('u0')).player_index, 0)
+        self.assertIs(cast(Seat, table.get_seat('u1')).player_index, 1)
+        self.assertIs(cast(Seat, table.get_seat('u2')).player_index, None)
+        self.assertIs(cast(Seat, table.get_seat('u3')).player_index, None)
         table.buy_rebuy_top_off_or_rat_hole('u2', 200)
         self.terminate(table.state)
         table.buy_rebuy_top_off_or_rat_hole('u3', 200)
@@ -206,10 +198,10 @@ class TableTestCase(SimpleTestCase):
 
         assert table.state is not None
 
-        self.assertEqual(table.get_seat('u0').player_index, 0)
-        self.assertEqual(table.get_seat('u1').player_index, 1)
-        self.assertEqual(table.get_seat('u2').player_index, 2)
-        self.assertEqual(table.get_seat('u3').player_index, 3)
+        self.assertIs(cast(Seat, table.get_seat('u0')).player_index, 0)
+        self.assertIs(cast(Seat, table.get_seat('u1')).player_index, 1)
+        self.assertIs(cast(Seat, table.get_seat('u2')).player_index, 2)
+        self.assertIs(cast(Seat, table.get_seat('u3')).player_index, 3)
         self.terminate(table.state)
         table.destroy_state()
 
