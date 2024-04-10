@@ -65,13 +65,13 @@ class Controller(ABC):
         :return: The stopped controller.
         """
         with cls._lock:
-            cls._controllers[name].handle('', 'terminate')
-            cls._threads[name].join()
-
             controller = cls._controllers.pop(name)
-            cls._threads.pop(name)
+            thread = cls._threads.pop(name)
 
-            return controller
+        controller.handle('', 'terminate')
+        thread.join()
+
+        return controller
 
     @classmethod
     def lookup(cls, name: str) -> Controller:
@@ -206,21 +206,21 @@ class Controller(ABC):
 
             return time_banks[user]
 
-        status = True
+        termination = False
 
         def parse_user_action() -> None:
-            nonlocal status
+            nonlocal termination
 
             tokens = action.split()
 
-            match user, tokens:
-                case 'terminate':
+            match tokens:
+                case ('terminate',):
                     if user:
                         raise ValueError(
                             f'The user {user} does not have the permission.',
                         )
 
-                    status = False
+                    termination = True
                 case 'j', seat_index:
                     table.join(user, int(seat_index))
                 case ('l',):
@@ -287,7 +287,7 @@ class Controller(ABC):
         self.callback(frames, users_message)
         frames.clear()
 
-        while status:
+        while not termination:
             user_action = get_event()
 
             if user_action is not None:

@@ -38,7 +38,7 @@
 {% block scripts %}
 {{ object.pk|json_script:"pk" }}
 {{ object.get_websocket_url|json_script:"websocket_url" }}
-{{ configuration|json_script:"configuration" }}
+{{ style|json_script:"style" }}
 {{ frame|json_script:"frame" }}
 <script src="{% static 'cardroom/cashgame_felt.js' %}"></script>
 {% endblock %}

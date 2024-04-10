@@ -291,13 +291,10 @@ class Frame:
         if table.state is None:
             history = ''
         else:
-            lookup = {seat.player_index: seat for seat in table.seats}
-            hh = HandHistory.from_game_state(
-                table.game,
-                table.state,
-                seats=[lookup[i].index for i in table.state.player_indices],
-                players=[lookup[i].user for i in table.state.player_indices],
-            )
+            hh = table.hand_history
+
+            assert hh is not None
+
             history = hh.dumps()
 
         frames = {}

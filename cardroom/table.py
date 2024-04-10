@@ -13,7 +13,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from random import choice
 
-from pokerkit import Poker, State
+from pokerkit import HandHistory, Poker, State
 
 from cardroom.utilities import get_rat_holing_status
 
@@ -282,10 +282,43 @@ class Table:
         """
         if self.state is not None:
             for seat in self.seats:
-                if seat.player_index == self.state.turn_index:
+                if (
+                        seat.player_status
+                        and seat.player_index == self.state.turn_index
+                ):
                     return seat
 
         return None
+
+    @property
+    def player_seats(self) -> Iterator[Seat]:
+        """Iterate through the seats that contain the players, in order.
+
+        :return: The player seats.
+        """
+        if self.state is not None:
+            seats = {seat.player_index: seat for seat in self.seats}
+
+            for i in self.state.player_indices:
+                yield seats[i]
+
+    @property
+    def hand_history(self) -> HandHistory | None:
+        """Return the hand history of active state, if any.
+
+        :return: The hand history or ``None``.
+        """
+        if self.state is None:
+            hh = None
+        else:
+            hh = HandHistory.from_game_state(
+                self.game,
+                self.state,
+                seats=[seat.index for seat in self.player_seats],
+                players=[seat.user for seat in self.player_seats],
+            )
+
+        return hh
 
     def get_seat(self, user: str) -> Seat | None:
         """Lookup the seat of the user.

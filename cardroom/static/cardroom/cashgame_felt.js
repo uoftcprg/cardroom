@@ -77,76 +77,76 @@ function updateActions() {
 
 	jButton.innerText = "Join";
 
-	if (frame["join"] === null)
+	if (frame["action"]["j"] === null)
 		jSeatIndex.value = "";
 	else
-		jSeatIndex.value = frame["join"].join(", ");
+		jSeatIndex.value = frame["action"]["j"].join(", ");
 
-	jButton.disabled = frame["join"] === null;
-	jSeatIndex.disabled = frame["join"] === null;
+	jButton.disabled = frame["action"]["j"] === null;
+	jSeatIndex.disabled = frame["action"]["j"] === null;
 	lButton.innerText = "Leave";
-	lButton.disabled = !frame["leave"];
+	lButton.disabled = frame["action"]["l"] === null;
 	sButton.innerText = "Sit out";
-	sButton.disabled = !frame["sit_out"];
+	sButton.disabled = frame["action"]["s"] === null;
 	bButton.innerText = "I'm back";
-	bButton.disabled = !frame["be_back"];
+	bButton.disabled = frame["action"]["b"] === null;
 	brtrButton.innerText = "Override stack";
-	brtrButton.disabled = frame["buy_rebuy_top_off_or_rat_hole"] === null;
+	brtrButton.disabled = frame["action"]["brtr"] === null;
 
-	if (frame["buy_rebuy_top_off_or_rat_hole"] === null)
+	if (frame["action"]["brtr"] === null)
 		brtrAmount.value = "";
 	else
-		brtrAmount.value = frame["buy_rebuy_top_off_or_rat_hole"].join(" - ");
+		brtrAmount.value = frame["action"]["brtr"].join(" - ");
 
-	brtrAmount.disabled = frame["buy_rebuy_top_off_or_rat_hole"] === null;
+	brtrAmount.disabled = frame["action"]["brtr"] === null;
 	sdButton.innerText = "Stand pat/Discard";
-	sdButton.disabled = frame["stand_pat_or_discard"] === null;
+	sdButton.disabled = frame["action"]["sd"] === null;
 	
-	if (frame["stand_pat_or_discard"] === null)
+	if (frame["action"]["sd"] === null)
 		sdCards.value = "";
 	else
-		sdCards.value = frame["stand_pat_or_discard"].join("");
+		sdCards.value = frame["action"]["sd"].join("");
 
-	sdCards.disabled = frame["stand_pat_or_discard"] === null;
+	sdCards.disabled = frame["action"]["sd"] === null;
 	fButton.innerText = "Fold";
-	fButton.disabled = !frame["fold"];
+	fButton.disabled = frame["action"]["f"] === null;
 
-	if (frame["check_or_call"] === null)
+	if (frame["action"]["cc"] === null)
 		ccButton.innerText = "Check/Call";
-	else if (frame["check_or_call"] === 0)
+	else if (frame["action"]["cc"] === 0)
 		ccButton.innerText = "Check";
 	else
-		ccButton.innerText = `Call ${frame["check_or_call"]}`;
+		ccButton.innerText = `Call ${frame["action"]["cc"]}`;
 
-	ccButton.disabled = frame["check_or_call"] === null;
+	ccButton.disabled = frame["action"]["cc"] === null;
 
-	if (frame["post_bring_in"] === null)
+	if (frame["action"]["pb"] === null)
 		pbButton.innerText = "Bring-in";
 	else
-		pbButton.innerText = `Bring-in ${frame["post_bring_in"]}`;
+		pbButton.innerText = `Bring-in ${frame["action"]["pb"]}`;
 
-	pbButton.disabled = frame["post_bring_in"] === null;
+	pbButton.disabled = frame["action"]["pb"] === null;
 
-	if (frame["complete_bet_or_raise_to"] === null)
+	if (frame["action"]["cbr"] === null)
 		cbrButton.innerText = "Complete/Bet/Raise to";
-	else if (frame["complete_bet_or_raise_to"][0])
+	else if (frame["action"]["cbr"][0])
 		cbrButton.innerText = "Complete";
-	else if (frame["complete_bet_or_raise_to"][1])
+	else if (frame["action"]["cbr"][1])
 		cbrButton.innerText = "Raise";
 	else
 		cbrButton.innerText = "Bet";
 
-	if (frame["complete_bet_or_raise_to"] === null)
+	if (frame["action"]["cbr"] === null)
 		cbrAmount.value = "";
 	else
-		cbrAmount.value = `${frame["complete_bet_or_raise_to"][2]} - ${frame["complete_bet_or_raise_to"][3]}`;
+		cbrAmount.value = `${frame["action"]["cbr"][2]} - ${frame["action"]["cbr"][3]}`;
 
-	cbrButton.disabled = frame["complete_bet_or_raise_to"] === null;
-	cbrAmount.disabled = frame["complete_bet_or_raise_to"] === null;
+	cbrButton.disabled = frame["action"]["cbr"] === null;
+	cbrAmount.disabled = frame["action"]["cbr"] === null;
 	smButton.innerText = "Show/Muck";
-	smCards.value = frame["show_or_muck_hole_cards"] ? "-" : "";
-	smButton.disabled = frame["show_or_muck_hole_cards"] === null;
-	smCards.disabled = frame["show_or_muck_hole_cards"] === null;
+	smCards.value = frame["action"]["sm"] ? "-" : "";
+	smButton.disabled = frame["action"]["sm"] === null;
+	smCards.disabled = frame["action"]["sm"] === null;
 }
 
 const canvas = document.getElementById("felt");
@@ -168,10 +168,10 @@ const smButton = document.getElementById("sm");
 const smCards = document.getElementById("sm-cards");
 const pk = JSON.parse(document.getElementById("pk").textContent);
 const websocketURL = JSON.parse(document.getElementById("websocket_url").textContent);
-const configuration = JSON.parse(document.getElementById("configuration").textContent);
+const style = JSON.parse(document.getElementById("style").textContent);
 let frameGuard = true;
 let frames = [JSON.parse(document.getElementById("frame").textContent)];
-const felt = new Felt(canvas.width, canvas.height, canvas, configuration, getFrame);
+const felt = new Felt(canvas.width, canvas.height, canvas, style, getFrame);
 let protocol;
 
 if (location.protocol === "http:")
@@ -203,6 +203,6 @@ webSocket.onclose = function(event) {
 	console.error("Cash game socket closed unexpectedly");
 }
 
-setInterval(shifter, configuration["shifter_timeout"] * 1000);
-setInterval(watchdog, configuration["watchdog_timeout"] * 1000);
+setInterval(shifter, style["shifter_timeout"] * 1000);
+setInterval(watchdog, style["watchdog_timeout"] * 1000);
 updateActions();

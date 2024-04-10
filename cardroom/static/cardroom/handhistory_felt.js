@@ -24,9 +24,9 @@ const previousButton = document.getElementById("previous");
 const nextButton = document.getElementById("next");
 const indexSpan = document.getElementById("index");
 const maxIndexSpan = document.getElementById("max-index");
-const configuration = JSON.parse(document.getElementById("configuration").textContent);
+const style = JSON.parse(document.getElementById("style").textContent);
 const frames = JSON.parse(document.getElementById("frames").textContent);
 const frameGetter = () => frames[index];
-const felt = new Felt(canvas.width, canvas.height, canvas, configuration, frameGetter);
+const felt = new Felt(canvas.width, canvas.height, canvas, style, frameGetter);
 
 update();

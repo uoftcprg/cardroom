@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block scripts %}
-{{ configuration|json_script:"configuration" }}
+{{ style|json_script:"style" }}
 {{ frames|json_script:"frames" }}
 <script src="{% static 'cardroom/handhistory_felt.js' %}"></script>
 {% endblock %}
