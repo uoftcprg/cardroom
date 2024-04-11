@@ -11,6 +11,7 @@
 
    table
    tournament
+   pfn
    contributing
    changelog
    reference
