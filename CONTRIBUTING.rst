@@ -28,9 +28,11 @@ When making changes, please follow these guidelines:
 - Document your changes in the code and update the README file if necessary.
 - After making changes, please validate your changes.
 
-1. Run static type checking: ``mypy cardroom``
-2. Run style checking: ``flake8 cardroom``
-3. Run unit tests: ``DJANGO_SETTINGS_MODULE=settings python -m cardroom test``
+1. Run style checking: ``flake8 cardroom``
+2. Run static type checking: ``mypy cardroom``
+3. Run checks for missing docstrings: ``interrogate -f 100 -i -m -n -p -s -r '^\w+TestCase' cardroom``
+4. Run unit tests: ``DJANGO_SETTINGS_MODULE=settings python -m cardroom test``
+5. Run doctests: ``python -m doctest cardroom/*.py``
 
 Submitting a Pull Request
 -------------------------
