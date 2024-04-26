@@ -13,7 +13,7 @@ setup(
     author_email='uoftcprg@studentorg.utoronto.ca',
     license='MIT',
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 1 - Planning',
         'Intended Audience :: Developers',
         'Intended Audience :: Education',
         'Topic :: Education',
