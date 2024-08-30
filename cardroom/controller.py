@@ -122,8 +122,8 @@ class Controller(ABC):
                     table.join(user, int(seat_index))
                 case ('l',):
                     table.leave(user)
-                case ('s',):
-                    table.sit_out(user)
+                # case ('s',):
+                #     table.sit_out(user)
                 case ('b',):
                     table.be_back(user)
                 case 'brtr', starting_stack:
@@ -198,36 +198,36 @@ class Controller(ABC):
             while frame_count != len(frames):
                 frame_count = len(frames)
 
-                for user in table.users:
-                    seat = table.get_seat(user)
+                # for user in table.users:
+                #     seat = table.get_seat(user)
 
-                    if (
-                            table.state is not None
-                            and not seat.player_status
-                            and table.can_sit_out(user)
-                    ):
-                        table.sit_out(user)
+                #     if (
+                #             table.state is not None
+                #             and not seat.player_status
+                #             and table.can_sit_out(user)
+                #     ):
+                #         table.sit_out(user)
 
-                    status = is_past_timestamp(idle_timestamps.get(user))
+                #     status = is_past_timestamp(idle_timestamps.get(user))
 
-                    if (
-                            status
-                            or seat.active_status
-                            or not table.can_leave(user)
-                    ):
-                        idle_timestamps[user] = None
-                    elif idle_timestamps.get(user) is None:
-                        idle_timestamps[user] = get_future_timestamp(
-                            self.idle_timeout,
-                        )
+                #     if (
+                #             status
+                #             or seat.active_status
+                #             or not table.can_leave(user)
+                #     ):
+                #         idle_timestamps[user] = None
+                #     elif idle_timestamps.get(user) is None:
+                #         idle_timestamps[user] = get_future_timestamp(
+                #             self.idle_timeout,
+                #         )
 
-                    if (
-                            status
-                            and not seat.active_status
-                            and table.can_leave(user)
-                    ):
-                        table.leave(user)
-                        append_frames()
+                #     if (
+                #             status
+                #             and not seat.active_status
+                #             and table.can_leave(user)
+                #     ):
+                #         table.leave(user)
+                #         append_frames()
 
                 status = is_past_timestamp(state_construction_timestamp)
 

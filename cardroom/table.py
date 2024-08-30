@@ -390,7 +390,7 @@ class Table:
 
     def sit_out(self, user: str) -> None:
         seat = self.verify_sitting_out(user)
-        seat.active_status = False
+        # seat.active_status = False
 
     def verify_being_back(self, user: str) -> Seat:
         seat = self.get_seat(user)
