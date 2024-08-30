@@ -225,8 +225,9 @@ class Controller(ABC):
                     table.join(user, int(seat_index))
                 case ('l',):
                     table.leave(user)
-                case ('s',):
-                    table.sit_out(user)
+                # TODO
+                # case ('s',):
+                #     table.sit_out(user)
                 case ('b',):
                     table.be_back(user)
                 case 'brtr', starting_stack:
@@ -317,40 +318,41 @@ class Controller(ABC):
             while frame_count != len(frames):
                 frame_count = len(frames)
 
-                for user in table.users:
-                    seat = table.get_seat(user)
+                # TODO
+                # for user in table.users:
+                #     seat = table.get_seat(user)
 
-                    assert seat is not None
+                #     assert seat is not None
 
-                    if (
-                            table.state is not None
-                            and not seat.player_status
-                            and not seat.ready_or_postable_status
-                            and not seat.wait_status
-                            and table.can_sit_out(user)
-                    ):
-                        table.sit_out(user)
+                #     if (
+                #             table.state is not None
+                #             and not seat.player_status
+                #             and not seat.ready_or_postable_status
+                #             and not seat.wait_status
+                #             and table.can_sit_out(user)
+                #     ):
+                #         table.sit_out(user)
 
-                    status = is_past(idle_dts.get(user))
+                #     status = is_past(idle_dts.get(user))
 
-                    if (
-                            status
-                            or seat.active_status
-                            or not table.can_leave(user)
-                    ):
-                        idle_dts[user] = None
-                    elif idle_dts.get(user) is None:
-                        idle_dts[user] = get_future_dt(
-                            self.idle_timeout,
-                        )
+                #     if (
+                #             status
+                #             or seat.active_status
+                #             or not table.can_leave(user)
+                #     ):
+                #         idle_dts[user] = None
+                #     elif idle_dts.get(user) is None:
+                #         idle_dts[user] = get_future_dt(
+                #             self.idle_timeout,
+                #         )
 
-                    if (
-                            status
-                            and not seat.active_status
-                            and table.can_leave(user)
-                    ):
-                        table.leave(user)
-                        append_frames()
+                #     if (
+                #             status
+                #             and not seat.active_status
+                #             and table.can_leave(user)
+                #     ):
+                #         table.leave(user)
+                #         append_frames()
 
                 status = is_past(state_construction_dt)
 
@@ -483,8 +485,9 @@ class Controller(ABC):
                         table.state.show_or_muck_hole_cards()
                         append_frames()
 
-            for user in set(idle_dts) - set(table.users):
-                idle_dts.pop(user)
+            # TODO
+            # for user in set(idle_dts) - set(table.users):
+            #     idle_dts.pop(user)
 
             for user in set(time_banks) - set(table.users):
                 time_banks.pop(user)

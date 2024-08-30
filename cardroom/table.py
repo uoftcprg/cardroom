@@ -612,7 +612,7 @@ class Table:
         :return: ``None``.
         """
         seat = self.verify_sitting_out(user)
-        seat.active_status = False
+        # TODO: seat.active_status = False
 
     def verify_being_back(self, user: str) -> Seat:
         """Verify the being back operation.
